@@ -1,0 +1,9 @@
+{
+  "name": "tianxing-plc-selector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "天行 PLC 选型配置静态网页",
+  "scripts": {
+    "check": "node --check app.js"
+  }
+}
