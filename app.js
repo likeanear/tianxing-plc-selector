@@ -314,8 +314,8 @@ const PRODUCTS = [
     ["TM30-RQ04-NO-10", "继电器输出模块", "4 通道；常开继电器输出；停止输出可配置；外接电源缺失诊断", { relay: 4, dq: 4, tm30Module: 1 }],
     ["TM30-AI04-UI-10", "模拟量输入模块", "4 通道；电压 / 电流；支持 2/3/4 线制；16 位精度；滤波参数可配置", { ai: 4, tm30Module: 1 }],
     ["TM30-AQ04-UI-10", "模拟量输出模块", "4 通道；电压 / 电流；16 位精度；通道诊断；停止输出可配置", { aq: 4, tm30Module: 1 }],
-    ["TM30-TR04-10", "热电阻温度输入模块", "4 通道；24 位分辨率；0.1℃精度；支持 2/3 线；采样周期可配置", { temp: 4, tm30Module: 1 }],
-    ["TM30-TC04-10", "热电偶温度输入模块", "4 通道；24 位分辨率；0.1℃精度；内部冷端补偿；采样周期可配置", { temp: 4, tm30Module: 1 }],
+    ["TM30-TR04-10", "热电阻温度输入模块", "4 通道；24 位分辨率；0.1℃精度；支持 2/3 线；采样周期可配置", { temp: 4, rtd: 4, tm30Module: 1 }],
+    ["TM30-TC04-10", "热电偶温度输入模块", "4 通道；24 位分辨率；0.1℃精度；内部冷端补偿；采样周期可配置", { temp: 4, tc: 4, tm30Module: 1 }],
     ["TM30-SI02-DF-10", "SSI 绝对值编码器输入模块", "2 通道；差分信号；32 位数据类型；波特率和奇偶校验可配置", { encoder: 2, tm30Module: 1 }],
     ["TM30-HC02-DF-10", "高速计数器输入模块", "2 通道；差分信号；支持单相、双相、脉冲+方向、A/B/Z 相输入；最高 1MHz", { hsc: 2, tm30Module: 1 }],
     ["TM30-PO04-DS-10", "脉冲输出模块", "4 通道；2 通道差分 1MHz + 2 通道单端 200kHz；支持 PTO/PWM 模式", { pulse: 4, tm30Module: 1 }],
@@ -386,8 +386,8 @@ const PRODUCTS = [
     ["TD11-AQ04I23", "模拟量输出模块", "4 输出；16 位精度；电流输出 0~20mA；模块诊断；端子可插拔", { aq: 4, td11Module: 1 }],
     ["TD11-AQ08U23", "模拟量输出模块", "8 输出；16 位精度；电压输出 ±10V；模块诊断；端子可插拔", { aq: 8, td11Module: 1 }],
     ["TD11-AQ08I23", "模拟量输出模块", "8 输出；16 位精度；电流输出 0~20mA；模块诊断；端子可插拔", { aq: 8, td11Module: 1 }],
-    ["TD11-AT4RD23", "热电阻模块", "4 输入；16 位精度；PT100、PT1000 等；模块诊断；端子可插拔", { temp: 4, td11Module: 1 }],
-    ["TD11-AT4TC23", "热电偶模块", "4 输入；16 位精度；J、K 等；自带隔离电源；端子可插拔", { temp: 4, td11Module: 1 }],
+    ["TD11-AT4RD23", "热电阻模块", "4 输入；16 位精度；PT100、PT1000 等；模块诊断；端子可插拔", { temp: 4, rtd: 4, td11Module: 1 }],
+    ["TD11-AT4TC23", "热电偶模块", "4 输入；16 位精度；J、K 等；自带隔离电源；端子可插拔", { temp: 4, tc: 4, td11Module: 1 }],
     ["TD11-PS1AA13", "电源中继模块", "24VDC 电源中继，同时也是 5VDC 隔离总线电源中继；占用一个槽位；端子可插拔", { powerModule: 1, td11Module: 1, td11Power: 1 }],
     ["TD11-F2SSI23", "高速计数器模块", "2 组同步串行 SSI 输入；最大通信速率 1MHz；支持多圈或单圈 SSI 编码器输入", { encoder: 2, td11Module: 1, td11FastModule: 1 }],
     ["TD11-F2CNT23", "高速计数器模块", "2 组 A/B/C 计数输入；单端 24VDC/PNP 最大 200kHz，差分 5V 最大 4MHz", { hsc: 2, td11Module: 1, td11FastModule: 1 }],
@@ -419,6 +419,9 @@ const state = {
 };
 
 const el = {
+  topbar: document.querySelector(".topbar"),
+  overviewBar: document.querySelector(".overview-bar"),
+  catalogStickyHeader: document.querySelector(".catalog-sticky-header"),
   search: document.querySelector("#searchInput"),
   familyFilter: document.querySelector("#familyFilter"),
   networkFilterWrap: document.querySelector("#networkFilterWrap"),
@@ -436,8 +439,20 @@ const el = {
   selectedCount: document.querySelector("#selectedCount"),
   cartList: document.querySelector("#cartList"),
   metricList: document.querySelector("#metricList"),
+  overviewMetrics: document.querySelector("#overviewMetrics"),
+  overviewDetailTrigger: document.querySelector("#overviewDetailTrigger"),
+  overviewDetailPanel: document.querySelector("#overviewDetailPanel"),
+  overviewDetailTitle: document.querySelector("#overviewDetailTitle"),
+  overviewDetailCount: document.querySelector("#overviewDetailCount"),
+  overviewDetailMetrics: document.querySelector("#overviewDetailMetrics"),
   warningList: document.querySelector("#warningList"),
+  checkSummaryStat: document.querySelector("#checkSummaryStat"),
+  checkPanel: document.querySelector(".config-check-panel"),
+  checkBarToggle: document.querySelector("#checkBarToggle"),
+  checkPreview: document.querySelector("#checkPreview"),
+  checkToggleText: document.querySelector("#checkToggleText"),
   exportBtn: document.querySelector("#exportBtn"),
+  feedbackBtn: document.querySelector("#feedbackBtn"),
   backupBtn: document.querySelector("#backupBtn"),
   importBtn: document.querySelector("#importBtn"),
   importFile: document.querySelector("#importFile"),
@@ -449,6 +464,9 @@ const el = {
   configCountStat: document.querySelector("#configCountStat"),
   selectedItemStat: document.querySelector("#selectedItemStat"),
   healthStat: document.querySelector("#healthStat"),
+  mobileQuickNav: document.querySelector("#mobileQuickNav"),
+  mobileSelectedSummary: document.querySelector("#mobileSelectedSummary"),
+  mobileHealthText: document.querySelector("#mobileHealthText"),
   progressTracker: document.querySelector("#progressTracker"),
   toast: document.querySelector("#toast"),
   themeSwitcher: document.querySelector("#themeSwitcher"),
@@ -461,25 +479,39 @@ const el = {
   applySmartBtn: document.querySelector("#applySmartBtn"),
   recommendationResult: document.querySelector("#recommendationResult"),
   recommendationStatus: document.querySelector("#recommendationStatus"),
+  feedbackDialog: document.querySelector("#feedbackDialog"),
+  closeFeedbackBtn: document.querySelector("#closeFeedbackBtn"),
 };
 
 let currentSmartRecommendation = null;
+let stickyResizeObserver = null;
 
 const metricLabels = [
   ["controller", "控制器"],
-  ["hmi", "HMI"],
   ["coupler", "耦合器"],
   ["di", "DI 点数"],
   ["dq", "DO 点数"],
   ["ai", "AI 点数"],
   ["aq", "AO 点数"],
-  ["temp", "温度通道"],
+  ["rtd", "热电阻 RTD"],
+  ["tc", "热电偶 TC"],
   ["encoder", "编码器通道"],
   ["hsc", "高速计数通道"],
   ["pulse", "脉冲输出通道"],
   ["serial", "串口数"],
   ["commModule", "通讯模块"],
   ["powerModule", "电源模块"],
+  ["hmi", "HMI"],
+  ["accessory", "其他"],
+];
+
+const overviewMetricLabels = [
+  ["controller", "PLC"],
+  ["coupler", "耦合器"],
+  ["di", "DI"],
+  ["dq", "DO"],
+  ["ai", "AI"],
+  ["aq", "AO"],
 ];
 
 const networkFilters = [
@@ -524,6 +556,7 @@ function init() {
   bindEvents();
   el.totalProductStat.textContent = PRODUCTS.length;
   render();
+  setupStickyMeasurements();
 }
 
 function renderStepControls() {
@@ -558,6 +591,27 @@ function renderFamilyControls() {
 }
 
 function bindEvents() {
+  el.mobileQuickNav.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-scroll-target]");
+    if (!button) return;
+    const target = document.querySelector(`#${button.dataset.scrollTarget}`);
+    if (!target) return;
+    setMobileNavActive(button.dataset.scrollTarget);
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    target.scrollIntoView({ behavior, block: "start" });
+  });
+
+  let mobileNavFrame = 0;
+  window.addEventListener("scroll", () => {
+    if (mobileNavFrame || window.innerWidth > 720) return;
+    mobileNavFrame = window.requestAnimationFrame(() => {
+      mobileNavFrame = 0;
+      const configPanel = document.querySelector("#configPanel");
+      const activeTarget = window.scrollY + window.innerHeight * 0.35 >= configPanel.offsetTop ? "configPanel" : "catalogPanel";
+      setMobileNavActive(activeTarget);
+    });
+  }, { passive: true });
+
   el.search.addEventListener("input", () => {
     state.query = el.search.value.trim().toLowerCase();
     renderProducts();
@@ -630,9 +684,16 @@ function bindEvents() {
     if (button.dataset.action === "dec") setQty(model, qty - 1);
   });
 
-  el.rows.addEventListener("input", (event) => {
+  el.rows.addEventListener("change", (event) => {
     const input = event.target.closest("[data-qty]");
     if (!input) return;
+    setQty(input.dataset.model, input.value);
+  });
+
+  el.rows.addEventListener("keydown", (event) => {
+    const input = event.target.closest("[data-qty]");
+    if (!input || event.key !== "Enter") return;
+    event.preventDefault();
     setQty(input.dataset.model, input.value);
   });
 
@@ -677,8 +738,16 @@ function bindEvents() {
   });
 
   el.smartSelectBtn.addEventListener("click", openSmartSelector);
+  el.overviewDetailTrigger.addEventListener("click", () => {
+    setOverviewDetailExpanded(!el.overviewMetrics.classList.contains("is-expanded"));
+  });
+  el.checkBarToggle.addEventListener("click", () => {
+    setCheckBarExpanded(!el.checkPanel.classList.contains("is-expanded"));
+  });
+  el.feedbackBtn.addEventListener("click", () => el.feedbackDialog.showModal());
   el.closeSmartBtn.addEventListener("click", () => el.smartDialog.close());
   el.cancelSmartBtn.addEventListener("click", () => el.smartDialog.close());
+  el.closeFeedbackBtn.addEventListener("click", () => el.feedbackDialog.close());
   el.calculateSmartBtn.addEventListener("click", calculateSmartRecommendation);
   el.applySmartBtn.addEventListener("click", applySmartRecommendation);
   el.smartForm.addEventListener("submit", (event) => {
@@ -686,6 +755,7 @@ function bindEvents() {
     calculateSmartRecommendation();
   });
   el.smartForm.addEventListener("input", () => {
+    syncSmartConditionalFields();
     if (!currentSmartRecommendation) return;
     currentSmartRecommendation = null;
     el.applySmartBtn.disabled = true;
@@ -693,6 +763,14 @@ function bindEvents() {
   });
   el.smartDialog.addEventListener("click", (event) => {
     if (event.target === el.smartDialog) el.smartDialog.close();
+  });
+  el.feedbackDialog.addEventListener("click", (event) => {
+    if (event.target === el.feedbackDialog) el.feedbackDialog.close();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!el.overviewMetrics.classList.contains("is-expanded") || el.overviewMetrics.contains(event.target)) return;
+    setOverviewDetailExpanded(false);
   });
 
   document.addEventListener("keydown", (event) => {
@@ -703,7 +781,46 @@ function bindEvents() {
     if (event.key === "Escape" && document.activeElement === el.search && el.search.value) {
       el.clearSearchBtn.click();
     }
+    if (event.key === "Escape" && el.checkPanel.classList.contains("is-expanded")) {
+      setCheckBarExpanded(false);
+      el.checkBarToggle.focus();
+    }
+    if (event.key === "Escape" && el.overviewMetrics.classList.contains("is-expanded")) {
+      setOverviewDetailExpanded(false);
+      el.overviewDetailTrigger.focus();
+    }
   });
+}
+
+function setOverviewDetailExpanded(expanded) {
+  el.overviewMetrics.classList.toggle("is-expanded", expanded);
+  el.overviewDetailTrigger.setAttribute("aria-expanded", String(expanded));
+}
+
+function setCheckBarExpanded(expanded) {
+  el.checkPanel.classList.toggle("is-expanded", expanded);
+  el.checkBarToggle.setAttribute("aria-expanded", String(expanded));
+  el.checkToggleText.textContent = expanded ? "收起" : "展开";
+}
+
+function setupStickyMeasurements() {
+  const update = () => {
+    const topbarHeight = window.innerWidth > 1280 ? el.topbar.getBoundingClientRect().height : 0;
+    const overviewHeight = el.overviewBar.getBoundingClientRect().height;
+    const catalogControlsHeight = el.catalogStickyHeader.getBoundingClientRect().height;
+    document.documentElement.style.setProperty("--sticky-topbar-height", `${topbarHeight.toFixed(3)}px`);
+    document.documentElement.style.setProperty("--sticky-overview-height", `${overviewHeight.toFixed(3)}px`);
+    document.documentElement.style.setProperty("--catalog-controls-height", `${catalogControlsHeight.toFixed(3)}px`);
+  };
+
+  window.addEventListener("resize", update, { passive: true });
+  if ("ResizeObserver" in window) {
+    stickyResizeObserver = new ResizeObserver(update);
+    stickyResizeObserver.observe(el.topbar);
+    stickyResizeObserver.observe(el.overviewBar);
+    stickyResizeObserver.observe(el.catalogStickyHeader);
+  }
+  window.requestAnimationFrame(update);
 }
 
 function applyTheme(theme, announce = false) {
@@ -730,6 +847,7 @@ function applyTheme(theme, announce = false) {
 function openSmartSelector() {
   currentSmartRecommendation = null;
   el.applySmartBtn.disabled = true;
+  syncSmartConditionalFields();
   setRecommendationStatus("等待计算", "");
   el.recommendationResult.innerHTML = `
     <div class="engine-empty">
@@ -738,6 +856,21 @@ function openSmartSelector() {
       <p>系统将校核协议兼容性、模块容量、耦合器上限和设计余量。</p>
     </div>`;
   el.smartDialog.showModal();
+}
+
+function syncSmartConditionalFields() {
+  const hmiSize = el.smartForm.elements.hmiSize.value;
+  const controllerFamily = el.smartForm.elements.controllerFamily.value;
+  const hmiAiVisible = ["10", "12", "15"].includes(hmiSize);
+  const coatingVisible = controllerFamily === "t3";
+  const hmiAiField = document.querySelector("#hmiAiField");
+  const coatingField = document.querySelector("#coatingField");
+
+  hmiAiField.hidden = !hmiAiVisible;
+  coatingField.hidden = !coatingVisible;
+  if (!hmiAiVisible) el.smartForm.elements.hmiAi.checked = false;
+  if (!coatingVisible) el.smartForm.elements.coating.checked = false;
+  document.querySelector("#hmiSizeField").classList.toggle("field-wide", !hmiAiVisible && !coatingVisible);
 }
 
 function calculateSmartRecommendation() {
@@ -754,12 +887,12 @@ function readSmartRequirements() {
   return {
     projectName: String(data.get("projectName") || "").trim().slice(0, 30),
     controllerFamily: String(data.get("controllerFamily") || "t4"),
+    extensionProtocol: String(data.get("extensionProtocol") || "none"),
     protocol: String(data.get("protocol") || "PN"),
     ioSeries: String(data.get("ioSeries") || "auto"),
     reserve: numberValue("reserve"),
     digitalType: String(data.get("digitalType") || "PNP"),
     analogType: String(data.get("analogType") || "current"),
-    tempType: String(data.get("tempType") || "rtd"),
     hmiSize: String(data.get("hmiSize") || "none"),
     hmiAi: data.get("hmiAi") === "on",
     coating: data.get("coating") === "on",
@@ -767,7 +900,8 @@ function readSmartRequirements() {
     dq: numberValue("dq"),
     ai: numberValue("ai"),
     aq: numberValue("aq"),
-    temp: numberValue("temp"),
+    rtd: numberValue("rtd"),
+    tc: numberValue("tc"),
     hsc: numberValue("hsc"),
     encoder: numberValue("encoder"),
     pulse: numberValue("pulse"),
@@ -782,7 +916,8 @@ function buildSmartRecommendation(req) {
   const warnings = [];
   const errors = [];
   const protocolLabels = { PN: "PROFINET", EC: "EtherCAT", DP: "PROFIBUS DP", TCP: "Modbus TCP / S7-TCP" };
-  const ioDemand = [req.di, req.dq, req.ai, req.aq, req.temp, req.hsc, req.encoder, req.pulse, req.serial].some((value) => value > 0);
+  const extensionLabels = { none: "不需要", PN: "PROFINET", DP: "PROFIBUS DP", RN: "RapidNet" };
+  const ioDemand = [req.di, req.dq, req.ai, req.aq, req.rtd, req.tc, req.hsc, req.encoder, req.pulse, req.serial].some((value) => value > 0);
 
   let ioSeries = req.ioSeries;
   if (ioSeries === "auto") {
@@ -797,7 +932,7 @@ function buildSmartRecommendation(req) {
       notes.push("根据通讯或信号类型，自动选择接口覆盖更完整的 TD11 系列。");
     } else {
       ioSeries = "td11";
-      notes.push("常规点数场景优先选择 32 点数字模块和 8 点模拟模块的 TD11 系列，以减少槽位占用。");
+      notes.push("常规点数场景优先选择点位较少的 TD11 模块，便于精细配置并减少空余通道。");
     }
   }
 
@@ -816,6 +951,12 @@ function buildSmartRecommendation(req) {
   if (req.controllerFamily === "t3" && req.protocol === "DP") {
     errors.push("T3 控制器产品表未提供 PROFIBUS DP 接口型号，请改用 T4 标准或 T4 冗余控制器。 ");
   }
+  if (req.controllerFamily === "t3" && req.extensionProtocol !== "none") {
+    errors.push("当前 T3 控制器产品表没有对应扩展通讯机型；需要扩展通讯时请选择 T4 标准控制器。 ");
+  }
+  if (req.controllerFamily === "redundant" && ["PN", "RN"].includes(req.extensionProtocol)) {
+    errors.push(`当前 T4 冗余控制器只提供 DP 扩展型号，无法增加 ${extensionLabels[req.extensionProtocol]} 扩展接口。`);
+  }
   if (req.controllerFamily !== "t3" && req.coating) {
     warnings.push("三防漆选项只在当前 T3 型号表中有明确对应型号，本次控制器推荐不应用该选项。 ");
   }
@@ -825,11 +966,12 @@ function buildSmartRecommendation(req) {
 
   const controllerModel = chooseSmartController(req);
   if (controllerModel) {
-    addSmartRow(rows, items, controllerModel, 1, "控制器", `${protocolLabels[req.protocol]} 主站/网络需求`);
+    const extensionBasis = req.extensionProtocol === "none" ? "" : `，附加 ${extensionLabels[req.extensionProtocol]} 接口`;
+    addSmartRow(rows, items, controllerModel, 1, "控制器", `${protocolLabels[req.protocol]} 主站/网络需求${extensionBasis}`);
   }
 
   const moduleDefinitions = getSmartModuleDefinitions(ioSeries, req);
-  const demandKeys = ["di", "dq", "ai", "aq", "temp", "hsc", "encoder", "pulse", "serial"];
+  const demandKeys = ["di", "dq", "ai", "aq", "rtd", "tc", "hsc", "encoder", "pulse", "serial"];
   const capacitySummary = [];
   demandKeys.forEach((key) => {
     const requested = req[key];
@@ -871,7 +1013,7 @@ function buildSmartRecommendation(req) {
     warnings.push("TH32 AI 增强型当前没有 7 英寸型号，已回退为 TH22-07RT-20。 ");
   }
 
-  notes.unshift(`控制器选择 ${controllerModel || "未匹配"}，远程 I/O 选择 ${ioSeries.toUpperCase()}，主通讯为 ${protocolLabels[req.protocol]}。`);
+  notes.unshift(`控制器选择 ${controllerModel || "未匹配"}，远程 I/O 选择 ${ioSeries.toUpperCase()}，主通讯为 ${protocolLabels[req.protocol]}，PLC 扩展通讯为${extensionLabels[req.extensionProtocol]}。`);
   if (req.reserve > 0 && capacitySummary.length > 0) {
     notes.push(`所有点数均先增加 ${req.reserve}% 设计余量，再按单模块通道数向上取整。`);
   }
@@ -891,13 +1033,20 @@ function buildSmartRecommendation(req) {
 
 function chooseSmartController(req) {
   if (req.controllerFamily === "t3") {
+    if (req.extensionProtocol !== "none") return "";
     const base = req.protocol === "PN" ? "T324-XP-CD-10" : "T324-XE-CD-10";
     return req.coating ? `${base}/C` : base;
   }
   if (req.controllerFamily === "redundant") {
-    return req.protocol === "DP" ? "T426EH-XEP-Z1-10" : "T426EH-XEP-Z0-10";
+    if (["PN", "RN"].includes(req.extensionProtocol)) return "";
+    return req.protocol === "DP" || req.extensionProtocol === "DP" ? "T426EH-XEP-Z1-10" : "T426EH-XEP-Z0-10";
   }
-  return req.protocol === "DP" ? "T426E-XEP-Z1-10/1PN1DP" : "T426-XEP-10";
+  if (req.extensionProtocol === "RN") {
+    return req.protocol === "DP" ? "T426E-XEP-Z1-10/1PN1RN1DP" : "T426E-XEP-Z0-10/1RN";
+  }
+  if (req.protocol === "DP" || req.extensionProtocol === "DP") return "T426E-XEP-Z1-10/1PN1DP";
+  if (req.extensionProtocol === "PN") return "T426E-XEP-Z0-10/1PN";
+  return "T426-XEP-10";
 }
 
 function chooseSmartCoupler(series, protocol) {
@@ -915,18 +1064,20 @@ function getSmartModuleDefinitions(series, req) {
       dq: { model: "TM30-DQ16-PP-20", capacity: 16 },
       ai: { model: "TM30-AI04-UI-10", capacity: 4 },
       aq: { model: "TM30-AQ04-UI-10", capacity: 4 },
-      temp: { model: req.tempType === "tc" ? "TM30-TC04-10" : "TM30-TR04-10", capacity: 4 },
+      rtd: { model: "TM30-TR04-10", capacity: 4 },
+      tc: { model: "TM30-TC04-10", capacity: 4 },
       hsc: { model: "TM30-HC02-DF-10", capacity: 2 },
       encoder: { model: "TM30-SI02-DF-10", capacity: 2 },
       pulse: { model: "TM30-PO04-DS-10", capacity: 4 },
     };
   }
   return {
-    di: { model: "TD11-DI32M13", capacity: 32 },
-    dq: { model: req.digitalType === "NPN" ? "TD11-DQ32N13" : "TD11-DQ32P13", capacity: 32 },
-    ai: { model: req.analogType === "voltage" ? "TD11-AI08U23" : "TD11-AI08I23", capacity: 8 },
-    aq: { model: req.analogType === "voltage" ? "TD11-AQ08U23" : "TD11-AQ08I23", capacity: 8 },
-    temp: { model: req.tempType === "tc" ? "TD11-AT4TC23" : "TD11-AT4RD23", capacity: 4 },
+    di: { model: "TD11-DI16M13", capacity: 16 },
+    dq: { model: req.digitalType === "NPN" ? "TD11-DQ16N13" : "TD11-DQ16P13", capacity: 16 },
+    ai: { model: req.analogType === "voltage" ? "TD11-AI04U23" : "TD11-AI04I23", capacity: 4 },
+    aq: { model: req.analogType === "voltage" ? "TD11-AQ04U23" : "TD11-AQ04I23", capacity: 4 },
+    rtd: { model: "TD11-AT4RD23", capacity: 4 },
+    tc: { model: "TD11-AT4TC23", capacity: 4 },
     hsc: { model: "TD11-F2CNT23", capacity: 2 },
     encoder: { model: "TD11-F2SSI23", capacity: 2 },
     serial: { model: "TD11-F2COM21", capacity: 2 },
@@ -962,7 +1113,7 @@ function addSmartRow(rows, items, model, qty, role, basis) {
 function renderSmartRecommendation(recommendation) {
   const { rows, notes, warnings, errors, capacitySummary, ioSeries } = recommendation;
   setRecommendationStatus(errors.length ? `${errors.length} 项冲突` : "计算完成", errors.length ? "error" : "ready");
-  const capacityLabels = { di: "DI", dq: "DO", ai: "AI", aq: "AO", temp: "温度", hsc: "高速计数", encoder: "SSI", pulse: "PTO", serial: "串口" };
+  const capacityLabels = { di: "DI", dq: "DO", ai: "AI", aq: "AO", rtd: "热电阻", tc: "热电偶", hsc: "高速计数", encoder: "SSI", pulse: "PTO", serial: "串口" };
 
   el.recommendationResult.innerHTML = `
     <div class="recommendation-summary">
@@ -1195,13 +1346,13 @@ function productRow(product) {
   return `
     <tr class="${[qty > 0 ? "is-selected" : "", recommendation ? "is-recommended" : ""].filter(Boolean).join(" ")}">
       <td class="family">${escapeHtml(product.family)}<br><span class="muted">${escapeHtml(product.group)}</span></td>
-      <td class="model">${escapeHtml(product.model)}<br><span class="muted">${escapeHtml(product.source)}</span></td>
+      <td class="model">${escapeHtml(product.model)}</td>
       <td class="name">${escapeHtml(product.name)}</td>
       <td class="summary">${escapeHtml(product.summary)}<div class="tags">${tags}</div></td>
       <td class="qty-cell">
         <div class="qty-control" aria-label="${escapeAttr(product.model)} 数量">
           <button type="button" data-action="dec" data-model="${escapeAttr(product.model)}" title="减少">−</button>
-          <input type="number" min="0" step="1" value="${qty}" data-qty data-model="${escapeAttr(product.model)}" aria-label="数量" />
+          <input type="number" min="0" max="9999" step="1" inputmode="numeric" value="${qty}" data-qty data-model="${escapeAttr(product.model)}" aria-label="${escapeAttr(product.model)} 数量" />
           <button type="button" data-action="inc" data-model="${escapeAttr(product.model)}" title="增加">+</button>
         </div>
       </td>
@@ -1221,14 +1372,21 @@ function renderConfiguration() {
       ? `<div class="empty-state">暂无配置</div>`
       : renderSelectedGroups(selected);
 
-  const visibleMetrics = metricLabels
-    .map(([key, label]) => [label, totals[key] || 0])
-    .filter(([, value]) => value > 0);
+  el.metricList.innerHTML = overviewMetricLabels
+    .map(([key, label]) => {
+      const value = totals[key] || 0;
+      return `<div class="${value > 0 ? "is-active" : ""}"><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div>`;
+    })
+    .join("");
 
-  el.metricList.innerHTML =
-    visibleMetrics.length === 0
-      ? `<div><dt>合计</dt><dd>0</dd></div>`
-      : visibleMetrics.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div>`).join("");
+  el.overviewDetailTitle.textContent = activeConfig.name;
+  el.overviewDetailCount.textContent = `${selected.length} 个型号 · ${totalQty} 件`;
+  el.overviewDetailMetrics.innerHTML = metricLabels
+    .map(([key, label]) => {
+      const value = totals[key] || 0;
+      return `<div class="${value > 0 ? "is-active" : ""}"><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div>`;
+    })
+    .join("");
 
   const recommendations = getRecommendationMessages();
   const warnings = getWarnings(totals);
@@ -1236,9 +1394,35 @@ function renderConfiguration() {
     ...recommendations.map((message) => ({ type: "info", text: message })),
     ...warnings.map((message) => ({ type: "warn", text: message })),
   ];
+  const checkStatus = selected.length === 0 ? "ready" : warnings.length ? "warn" : recommendations.length ? "info" : "ok";
+  el.checkPanel.dataset.status = checkStatus;
+  el.checkSummaryStat.textContent = selected.length === 0
+    ? "等待选型"
+    : warnings.length
+      ? `${warnings.length} 项待确认`
+      : recommendations.length
+        ? `${recommendations.length} 条选型建议`
+        : "检查通过";
+  el.checkPreview.textContent = selected.length === 0
+    ? "选择设备后实时检查数量和接口约束。"
+    : messages[0]?.text || "当前未发现数量或接口约束问题。";
   el.warningList.innerHTML = messages.length
-    ? messages.map((message) => `<li class="${message.type === "info" ? "info" : ""}">${escapeHtml(message.text)}</li>`).join("")
-    : `<li class="ok">当前未发现数量约束提醒。</li>`;
+    ? messages.map((message) => {
+        const isInfo = message.type === "info";
+        return `
+          <li class="${isInfo ? "info" : "warn"}">
+            <span class="check-message-icon" aria-hidden="true">${isInfo ? "i" : "!"}</span>
+            <span class="check-message-copy">
+              <strong>${isInfo ? "选型建议" : "需要确认"}</strong>
+              <span>${escapeHtml(message.text)}</span>
+            </span>
+          </li>`;
+      }).join("")
+    : `
+      <li class="ok">
+        <span class="check-message-icon" aria-hidden="true">✓</span>
+        <span class="check-message-copy"><strong>检查通过</strong><span>当前未发现数量或接口约束问题。</span></span>
+      </li>`;
 
   renderProgress(selected);
 }
@@ -1247,20 +1431,37 @@ function renderOverview() {
   const selected = getSelectedProducts();
   const totalQty = selected.reduce((sum, item) => sum + item.qty, 0);
   const warnings = getWarnings(getTotals(selected));
+  let healthText = "等待选型";
+  let healthStatus = "ready";
   el.configCountStat.textContent = state.configurations.length;
   el.selectedItemStat.textContent = totalQty;
   el.healthStat.className = "health-stat";
 
   if (selected.length === 0) {
     el.healthStat.classList.add("is-ready");
-    el.healthStat.querySelector("strong").textContent = "等待选型";
   } else if (warnings.length > 0) {
+    healthText = `${warnings.length} 项待确认`;
+    healthStatus = "warn";
     el.healthStat.classList.add("is-warn");
-    el.healthStat.querySelector("strong").textContent = `${warnings.length} 项待确认`;
   } else {
+    healthText = "配置状态正常";
+    healthStatus = "ok";
     el.healthStat.classList.add("is-ok");
-    el.healthStat.querySelector("strong").textContent = "配置状态正常";
   }
+
+  el.healthStat.querySelector("strong").textContent = healthText;
+  el.mobileSelectedSummary.textContent = `${selected.length} 个型号 · ${totalQty} 件`;
+  el.mobileHealthText.textContent = healthText;
+  el.mobileQuickNav.dataset.status = healthStatus;
+}
+
+function setMobileNavActive(targetId) {
+  el.mobileQuickNav.querySelectorAll("[data-scroll-target]").forEach((button) => {
+    const isActive = button.dataset.scrollTarget === targetId;
+    button.classList.toggle("is-active", isActive);
+    if (isActive) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
 }
 
 function renderProgress(selected) {
@@ -1405,7 +1606,7 @@ function getQty(model) {
 }
 
 function setQty(model, rawQty) {
-  const qty = Math.max(0, Math.floor(Number(rawQty) || 0));
+  const qty = Math.min(9999, Math.max(0, Math.floor(Number(rawQty) || 0)));
   const activeItems = getActiveConfiguration().items;
   if (qty === 0) {
     delete activeItems[model];
