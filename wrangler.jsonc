@@ -8,6 +8,10 @@
     {
       "pattern": "aiflyenoch.xyz",
       "custom_domain": true
+    },
+    {
+      "pattern": "www.aiflyenoch.xyz",
+      "custom_domain": true
     }
   ],
   "assets": {
