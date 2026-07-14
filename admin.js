@@ -93,7 +93,7 @@ async function restoreSession() {
 
 async function login(event) {
   event.preventDefault();
-  const token = el.adminTokenInput.value.trim();
+  const token = normalizeAdminToken(el.adminTokenInput.value);
   if (!token) return;
   el.loginBtn.disabled = true;
   el.loginStatus.textContent = "正在验证…";
@@ -108,6 +108,19 @@ async function login(event) {
   } finally {
     el.loginBtn.disabled = false;
   }
+}
+
+function normalizeAdminToken(value) {
+  let token = String(value || "").trim();
+  token = token.replace(/^ADMIN_TOKEN\s*=\s*/i, "").trim();
+  if (
+    token.length >= 2
+    && ((token.startsWith('"') && token.endsWith('"'))
+      || (token.startsWith("'") && token.endsWith("'")))
+  ) {
+    token = token.slice(1, -1).trim();
+  }
+  return token;
 }
 
 async function openWorkspace() {
