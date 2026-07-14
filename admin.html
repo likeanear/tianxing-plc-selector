@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#101820" />
+    <title>产品数据管理 | AI FLYENOCH</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="admin.css?v=20260714-cloud1" />
+  </head>
+  <body>
+    <header class="admin-topbar">
+      <a class="admin-brand" href="selector.html" title="返回选型工作台">
+        <span class="admin-brand-mark">TX</span>
+        <span><small>AI FLYENOCH / DATA OPS</small><strong>产品数据管理</strong></span>
+      </a>
+      <div class="admin-top-actions">
+        <span id="connectionState" class="connection-state"><i></i><span>未连接</span></span>
+        <a class="button button-quiet" href="selector.html">返回工作台</a>
+        <button id="logoutBtn" class="button button-quiet" type="button" hidden>退出</button>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <section id="loginView" class="login-view" aria-labelledby="loginTitle">
+        <form id="loginForm" class="login-panel">
+          <div>
+            <span class="eyebrow">ADMIN ACCESS</span>
+            <h1 id="loginTitle">管理身份验证</h1>
+          </div>
+          <label>
+            <span>管理令牌</span>
+            <input id="adminTokenInput" type="password" autocomplete="current-password" required />
+          </label>
+          <button id="loginBtn" class="button button-primary" type="submit">进入管理后台</button>
+          <p id="loginStatus" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="adminWorkspace" class="admin-workspace" hidden>
+        <section class="admin-overview" aria-label="数据概览">
+          <div><small>DATABASE</small><strong>D1 ONLINE</strong></div>
+          <dl>
+            <div><dt>启用产品</dt><dd id="productStat">0</dd></div>
+            <div><dt>云端方案</dt><dd id="projectStat">0</dd></div>
+            <div><dt>目录状态</dt><dd id="catalogStat">待同步</dd></div>
+          </dl>
+        </section>
+
+        <section class="feature-gate" aria-labelledby="cloudSaveFeatureTitle">
+          <div class="feature-copy">
+            <small>FEATURE GATE</small>
+            <strong id="cloudSaveFeatureTitle">云端方案保存</strong>
+            <span id="cloudSaveFeatureHelp">关闭时前端入口和方案接口均不可用</span>
+          </div>
+          <label class="feature-toggle">
+            <input id="cloudSaveFeature" type="checkbox" role="switch" />
+            <span class="feature-toggle-track" aria-hidden="true"><i></i></span>
+            <strong id="cloudSaveFeatureText">已关闭</strong>
+          </label>
+        </section>
+
+        <nav id="adminTabs" class="admin-tabs" aria-label="管理模块">
+          <button class="is-active" type="button" data-view="products" aria-current="page">产品目录</button>
+          <button type="button" data-view="rules">选型规则</button>
+        </nav>
+
+        <section id="productsView" class="admin-view" data-admin-view="products">
+          <div class="view-heading">
+            <div><span class="eyebrow">PRODUCT CATALOG</span><h1>产品目录</h1></div>
+            <button id="addProductBtn" class="button button-primary" type="button">新增产品</button>
+          </div>
+          <div class="admin-toolbar">
+            <label class="admin-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="productSearch" type="search" placeholder="搜索型号、名称或系列" autocomplete="off" />
+            </label>
+            <select id="productStatusFilter" aria-label="产品状态">
+              <option value="active">仅启用</option>
+              <option value="all">全部状态</option>
+              <option value="inactive">仅停用</option>
+            </select>
+            <button id="refreshProductsBtn" class="button button-quiet" type="button">刷新</button>
+            <span id="productCount" class="toolbar-count">0 条</span>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>状态</th><th>系列 / 分类</th><th>型号</th><th>名称</th><th>关键配置</th><th>排序</th><th>操作</th></tr></thead>
+              <tbody id="productTableBody"></tbody>
+            </table>
+            <div id="productEmpty" class="empty-state" hidden>没有符合条件的产品</div>
+          </div>
+        </section>
+
+        <section id="rulesView" class="admin-view" data-admin-view="rules" hidden>
+          <div class="view-heading">
+            <div><span class="eyebrow">SELECTION RULES</span><h1>选型规则</h1></div>
+            <span id="rulesUpdatedAt" class="updated-at">未读取</span>
+          </div>
+          <div class="rules-editor">
+            <textarea id="rulesEditor" spellcheck="false" aria-label="选型规则 JSON"></textarea>
+            <div class="rules-actions">
+              <span id="rulesStatus" role="status" aria-live="polite">等待编辑</span>
+              <div>
+                <button id="formatRulesBtn" class="button button-quiet" type="button">格式化</button>
+                <button id="saveRulesBtn" class="button button-primary" type="button">发布规则</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="productDialog" class="product-dialog" aria-labelledby="productDialogTitle">
+      <form id="productForm">
+        <div class="product-dialog-header">
+          <div><span class="eyebrow">PRODUCT RECORD</span><h2 id="productDialogTitle">新增产品</h2></div>
+          <button id="closeProductDialogBtn" class="icon-close" type="button" aria-label="关闭">×</button>
+        </div>
+        <div class="product-form-grid">
+          <input id="productId" type="hidden" />
+          <label><span>产品系列</span><input id="productFamily" type="text" maxlength="80" required /></label>
+          <label><span>产品分类</span><input id="productGroup" type="text" maxlength="80" required /></label>
+          <label><span>产品型号</span><input id="productModel" type="text" maxlength="100" required /></label>
+          <label><span>产品名称</span><input id="productName" type="text" maxlength="100" required /></label>
+          <label class="field-span"><span>关键配置</span><textarea id="productSummary" rows="4" maxlength="1200" required></textarea></label>
+          <label class="field-span"><span>标签（逗号分隔）</span><input id="productTags" type="text" maxlength="600" /></label>
+          <label><span>资料来源</span><input id="productSource" type="text" maxlength="80" /></label>
+          <label><span>排序</span><input id="productSortOrder" type="number" min="0" max="100000" step="1" value="0" /></label>
+          <label class="field-span"><span>指标 JSON</span><textarea id="productMetrics" rows="4" spellcheck="false">{}</textarea></label>
+          <label class="active-toggle"><input id="productActive" type="checkbox" checked /><span>启用该产品</span></label>
+        </div>
+        <div class="product-dialog-actions">
+          <button id="disableProductBtn" class="button button-danger" type="button" hidden>停用产品</button>
+          <div><button id="cancelProductBtn" class="button button-quiet" type="button">取消</button><button id="saveProductBtn" class="button button-primary" type="submit">保存产品</button></div>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
+    <script src="admin.js?v=20260714-cloud1"></script>
+  </body>
+</html>

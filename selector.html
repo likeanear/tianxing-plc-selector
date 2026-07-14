@@ -18,7 +18,7 @@
         document.documentElement.dataset.theme = "cyber";
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260714-plc2" />
+    <link rel="stylesheet" href="styles.css?v=20260714-cloud1" />
   </head>
   <body>
     <header class="topbar">
@@ -48,6 +48,7 @@
         <button id="feedbackBtn" class="ghost-button" type="button">意见反馈</button>
         <button id="backupBtn" class="ghost-button" type="button">备份方案</button>
         <button id="importBtn" class="ghost-button" type="button">导入方案</button>
+        <button id="cloudSaveBtn" class="ghost-button cloud-save-button" type="button" hidden>云端保存</button>
         <input id="importFile" type="file" accept="application/json,.json" hidden />
         <button id="smartSelectBtn" class="smart-button" type="button">
           <span class="smart-icon" aria-hidden="true">✦</span>
@@ -334,6 +335,46 @@
       </form>
     </dialog>
 
+    <dialog id="shareDialog" class="share-dialog" aria-labelledby="shareTitle">
+      <form id="shareForm">
+        <div class="share-dialog-header">
+          <div>
+            <span class="section-index">CLOUD / SHARE PROJECT</span>
+            <h2 id="shareTitle">保存并分享方案</h2>
+          </div>
+          <button id="closeShareBtn" class="dialog-close" type="button" aria-label="关闭云端保存">×</button>
+        </div>
+        <div class="share-dialog-body">
+          <label class="share-field">
+            <span>项目名称</span>
+            <input id="shareProjectTitle" name="title" type="text" maxlength="60" required />
+          </label>
+          <label class="share-field">
+            <span>项目备注</span>
+            <textarea id="shareProjectNote" name="note" maxlength="300" rows="3" placeholder="选填"></textarea>
+          </label>
+          <div id="shareResult" class="share-result" hidden>
+            <div>
+              <span>共享链接</span>
+              <strong id="shareResultTitle">方案已保存</strong>
+            </div>
+            <div class="share-link-row">
+              <input id="shareUrl" type="url" readonly aria-label="共享链接" />
+              <button id="copyShareBtn" class="ghost-button" type="button">复制</button>
+              <a id="openShareBtn" class="ghost-button" href="#" target="_blank" rel="noreferrer">打开</a>
+            </div>
+          </div>
+        </div>
+        <div class="share-dialog-actions">
+          <span id="shareStatus" aria-live="polite">保存后生成只读分享链接</span>
+          <div>
+            <button id="cancelShareBtn" class="ghost-button" type="button">取消</button>
+            <button id="submitShareBtn" class="primary-button" type="submit">保存到云端</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="feedbackDialog" class="feedback-dialog" aria-labelledby="feedbackTitle">
       <div class="feedback-dialog-shell">
         <div class="feedback-dialog-header">
@@ -363,6 +404,6 @@
     </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20260714-plc2"></script>
+    <script src="app.js?v=20260714-cloud1"></script>
   </body>
 </html>

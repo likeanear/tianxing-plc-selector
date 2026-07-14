@@ -1,6 +1,12 @@
 node_modules/
 .wrangler/
 .wrangler-preview/
+.dev.vars
+.env
+.env.*
+!.env.example
 .DS_Store
 Thumbs.db
 *.log
+.playwright-cli/
+output/

@@ -1,6 +1,8 @@
 # 天行 PLC 选型配置网页
 
-纯静态网页应用，可直接部署到公网静态托管平台。产品数据整理自《宝信天行 PLC 系列产品选型手册 2025.09》。
+`aiflyenoch.xyz` 的公开前端仓库。产品数据整理自《宝信天行 PLC 系列产品选型手册 2025.09》。
+
+生产环境由 Cloudflare Worker 同域提供 `/api/*` 接口，并使用 D1 存储产品目录、选型规则和功能开关。Worker 源码、D1 迁移、管理令牌及部署配置位于独立私有仓库，不包含在本仓库中。
 
 ## 功能
 
@@ -13,31 +15,20 @@
 - 支持赛博青、极光紫、工业亮三套主题并记忆用户选择
 - 支持方案重命名、复制、JSON 备份与恢复、仅看已选和排序
 - 支持导出 `.xlsx` Excel 配置清单
+- 产品目录和智能选型规则可由受保护的管理页维护
+- 云端方案保存受后台功能开关控制，默认关闭
 
-## 公网部署
+## 运行方式
 
-这是静态站点，部署时把仓库根目录作为发布目录即可。
+前端文件可由任意静态服务器打开，但产品目录管理、云端方案和其他 `/api/*` 功能需要配套的私有 Cloudflare Worker。
 
-### GitHub Pages
+生产环境由私有后端仓库统一部署 Worker 与本目录中的静态资源，避免单独部署静态文件时覆盖 API Worker。
 
-1. 把本目录推送到 GitHub 仓库。
-2. 在仓库 `Settings → Pages` 中选择 `Deploy from a branch`。
-3. 分支选择 `main`，目录选择 `/root`。
-4. 保存后等待 GitHub Pages 生成公网地址。
+仅进行界面预览时，可把仓库根目录发布到 GitHub Pages、Vercel、Netlify 或 CloudBase；此模式会使用页面内置目录作为回退数据，后台管理和云端功能不可用。
 
-### Vercel
+### 本地静态预览
 
-1. 在 Vercel 导入该 Git 仓库。
-2. Framework Preset 选择 `Other`。
-3. Build Command 留空，Output Directory 留空或填 `.`。
-4. 部署即可。
-
-### Netlify
-
-1. 在 Netlify 导入该 Git 仓库。
-2. Build command 留空。
-3. Publish directory 填 `.`。
-4. 部署即可。
+直接打开 `index.html`，或使用任意本地静态服务器启动本目录。
 
 ## 本地检查
 
@@ -46,6 +37,8 @@ npm run check
 ```
 
 ## 注意
+
+浏览器端的 HTML、CSS、JavaScript 和图片都会公开。不要把管理令牌、Cloudflare API Token、`.dev.vars`、D1 迁移或 Worker 后端源码放入本仓库。
 
 `manual.pdf` 会随网站一起公开发布。如果该手册不适合公开传播，请在部署前删除 `manual.pdf`，并移除页面里的“查看手册”入口。
 

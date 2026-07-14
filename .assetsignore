@@ -5,10 +5,17 @@
 .nojekyll
 .wrangler/
 .wrangler-preview/
+.playwright-cli/
 node_modules/
 README.md
 package.json
 package-lock.json
 wrangler.jsonc
 output/
+src/
+migrations/
+scripts/
+.dev.vars
+.env
+.env.*
 **/*.log

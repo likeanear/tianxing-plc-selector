@@ -4,6 +4,7 @@ const CREATOR = "FlyEnoch9";
 const CONFIG_STORAGE_KEY = "tx-selector-configurations-v2";
 const LEGACY_CART_STORAGE_KEY = "tx-selector-cart";
 const THEME_STORAGE_KEY = "tx-selector-theme-v2";
+const API_BASE = "/api";
 
 const t4Base = "集成 6 个网络端口：1/2/3 为 GE，4/5 为 GE/EC 可配置，6 为 PN/GE/EC 可配置";
 const t4Std = (extra) => `${t4Base}；${extra}；硬件版本 1.0`;
@@ -416,6 +417,9 @@ const state = {
   selectedOnly: false,
   configurations: savedConfigurations.configurations,
   activeConfigId: savedConfigurations.activeConfigId,
+  catalogVersion: "embedded",
+  features: { cloudSave: false },
+  cloudProjectId: null,
 };
 
 const el = {
@@ -455,6 +459,7 @@ const el = {
   feedbackBtn: document.querySelector("#feedbackBtn"),
   backupBtn: document.querySelector("#backupBtn"),
   importBtn: document.querySelector("#importBtn"),
+  cloudSaveBtn: document.querySelector("#cloudSaveBtn"),
   importFile: document.querySelector("#importFile"),
   renameCartBtn: document.querySelector("#renameCartBtn"),
   duplicateCartBtn: document.querySelector("#duplicateCartBtn"),
@@ -481,6 +486,19 @@ const el = {
   recommendationStatus: document.querySelector("#recommendationStatus"),
   feedbackDialog: document.querySelector("#feedbackDialog"),
   closeFeedbackBtn: document.querySelector("#closeFeedbackBtn"),
+  shareDialog: document.querySelector("#shareDialog"),
+  shareForm: document.querySelector("#shareForm"),
+  closeShareBtn: document.querySelector("#closeShareBtn"),
+  cancelShareBtn: document.querySelector("#cancelShareBtn"),
+  submitShareBtn: document.querySelector("#submitShareBtn"),
+  shareProjectTitle: document.querySelector("#shareProjectTitle"),
+  shareProjectNote: document.querySelector("#shareProjectNote"),
+  shareResult: document.querySelector("#shareResult"),
+  shareResultTitle: document.querySelector("#shareResultTitle"),
+  shareUrl: document.querySelector("#shareUrl"),
+  copyShareBtn: document.querySelector("#copyShareBtn"),
+  openShareBtn: document.querySelector("#openShareBtn"),
+  shareStatus: document.querySelector("#shareStatus"),
 };
 
 let currentSmartRecommendation = null;
@@ -532,7 +550,7 @@ const workflowSteps = [
   ["all", "全部", "查看全部型号"],
 ];
 
-const remoteIoCompatibility = {
+let remoteIoCompatibility = {
   PN: {
     label: "PROFINET",
     models: ["TM30-C1PN-10", "TD11-C2PNT13"],
@@ -547,9 +565,20 @@ const remoteIoCompatibility = {
   },
 };
 
-init();
+let selectionRules = {
+  limits: {
+    modulesPerCoupler: 32,
+    td11PowerSegment: 16,
+    td11FastPerCoupler: 4,
+  },
+  protocolLabels: { PN: "PROFINET", EC: "EtherCAT", DP: "PROFIBUS DP", TCP: "Modbus TCP / S7-TCP" },
+  extensionLabels: { none: "不需要", PN: "PROFINET", DP: "PROFIBUS DP", RN: "RapidNet" },
+  remoteIoCompatibility,
+};
 
-function init() {
+void init();
+
+async function init() {
   applyTheme(document.documentElement.dataset.theme || "cyber");
   renderStepControls();
   renderFamilyControls();
@@ -557,6 +586,79 @@ function init() {
   el.totalProductStat.textContent = PRODUCTS.length;
   render();
   setupStickyMeasurements();
+  await hydrateCatalog();
+  await loadSharedProjectFromUrl();
+}
+
+async function hydrateCatalog() {
+  try {
+    const response = await fetch(`${API_BASE}/catalog`, {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`catalog ${response.status}`);
+    const payload = await response.json();
+    if (!Array.isArray(payload.products) || payload.products.length === 0) {
+      throw new Error("catalog is empty");
+    }
+
+    PRODUCTS.splice(0, PRODUCTS.length, ...payload.products);
+    state.catalogVersion = String(payload.version || "unversioned");
+    state.features.cloudSave = payload.features?.cloudSave === true;
+    el.cloudSaveBtn.hidden = !state.features.cloudSave;
+    if (payload.rules && typeof payload.rules === "object") {
+      selectionRules = { ...selectionRules, ...payload.rules };
+      if (payload.rules.remoteIoCompatibility) {
+        remoteIoCompatibility = payload.rules.remoteIoCompatibility;
+      }
+    }
+    renderFamilyControls();
+    el.totalProductStat.textContent = PRODUCTS.length;
+    render();
+  } catch (error) {
+    console.warn("Using embedded catalog fallback", error);
+  }
+}
+
+async function loadSharedProjectFromUrl() {
+  const publicId = new URLSearchParams(window.location.search).get("project");
+  if (!publicId) return;
+  if (!state.features.cloudSave) {
+    showToast("云端方案功能当前已关闭");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(publicId)}`, {
+      headers: { accept: "application/json" },
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "共享方案读取失败");
+    if (!Array.isArray(payload.configurations) || payload.configurations.length === 0) {
+      throw new Error("共享方案没有有效配置");
+    }
+
+    const knownModels = new Set(PRODUCTS.map((product) => product.model));
+    const configurations = payload.configurations.map(normalizeConfiguration);
+    configurations.forEach((configuration) => {
+      configuration.items = Object.fromEntries(
+        Object.entries(configuration.items)
+          .filter(([model, quantity]) => knownModels.has(model) && Number(quantity) > 0)
+          .map(([model, quantity]) => [model, Math.min(9999, Math.floor(Number(quantity)))]),
+      );
+    });
+    state.configurations = configurations;
+    state.activeConfigId = configurations.some((item) => item.id === payload.activeConfigId)
+      ? payload.activeConfigId
+      : configurations[0].id;
+    state.cloudProjectId = publicId;
+    persistConfigurations();
+    render();
+    document.title = `${payload.title || "共享方案"} | 天行 PLC 智能选型工作台`;
+    showToast(`已载入云端方案“${payload.title || configurations[0].name}”`);
+  } catch (error) {
+    showToast(error.message || "共享方案读取失败");
+  }
 }
 
 function renderStepControls() {
@@ -728,6 +830,7 @@ function bindEvents() {
   el.duplicateCartBtn.addEventListener("click", duplicateActiveConfiguration);
   el.backupBtn.addEventListener("click", backupConfigurations);
   el.importBtn.addEventListener("click", () => el.importFile.click());
+  el.cloudSaveBtn.addEventListener("click", openShareDialog);
   el.importFile.addEventListener("change", importConfigurations);
   el.exportBtn.addEventListener("click", exportConfiguration);
 
@@ -748,6 +851,10 @@ function bindEvents() {
   el.closeSmartBtn.addEventListener("click", () => el.smartDialog.close());
   el.cancelSmartBtn.addEventListener("click", () => el.smartDialog.close());
   el.closeFeedbackBtn.addEventListener("click", () => el.feedbackDialog.close());
+  el.closeShareBtn.addEventListener("click", () => el.shareDialog.close());
+  el.cancelShareBtn.addEventListener("click", () => el.shareDialog.close());
+  el.shareForm.addEventListener("submit", saveProjectToCloud);
+  el.copyShareBtn.addEventListener("click", copyShareUrl);
   el.calculateSmartBtn.addEventListener("click", calculateSmartRecommendation);
   el.applySmartBtn.addEventListener("click", applySmartRecommendation);
   el.smartForm.addEventListener("submit", (event) => {
@@ -915,8 +1022,8 @@ function buildSmartRecommendation(req) {
   const notes = [];
   const warnings = [];
   const errors = [];
-  const protocolLabels = { PN: "PROFINET", EC: "EtherCAT", DP: "PROFIBUS DP", TCP: "Modbus TCP / S7-TCP" };
-  const extensionLabels = { none: "不需要", PN: "PROFINET", DP: "PROFIBUS DP", RN: "RapidNet" };
+  const protocolLabels = selectionRules.protocolLabels || { PN: "PROFINET", EC: "EtherCAT", DP: "PROFIBUS DP", TCP: "Modbus TCP / S7-TCP" };
+  const extensionLabels = selectionRules.extensionLabels || { none: "不需要", PN: "PROFINET", DP: "PROFIBUS DP", RN: "RapidNet" };
   const ioDemand = [req.di, req.dq, req.ai, req.aq, req.rtd, req.tc, req.hsc, req.encoder, req.pulse, req.serial].some((value) => value > 0);
 
   let ioSeries = req.ioSeries;
@@ -989,18 +1096,20 @@ function buildSmartRecommendation(req) {
     .filter((row) => row.role === "I/O 模块")
     .reduce((sum, row) => sum + row.qty, 0);
   if (ioDemand && ioModuleQuantity > 0 && errors.length === 0) {
-    const couplerQuantity = Math.ceil(ioModuleQuantity / 32);
+    const modulesPerCoupler = Math.max(1, Number(selectionRules.limits?.modulesPerCoupler) || 32);
+    const couplerQuantity = Math.ceil(ioModuleQuantity / modulesPerCoupler);
     const couplerModel = chooseSmartCoupler(ioSeries, req.protocol);
     if (couplerModel) {
-      addSmartRow(rows, items, couplerModel, couplerQuantity, "总线耦合器", `${ioModuleQuantity} 个 I/O 模块，按每站最多 32 个模块计算`);
+      addSmartRow(rows, items, couplerModel, couplerQuantity, "总线耦合器", `${ioModuleQuantity} 个 I/O 模块，按每站最多 ${modulesPerCoupler} 个模块计算`);
     } else {
       errors.push(`未找到 ${ioSeries.toUpperCase()} 与 ${protocolLabels[req.protocol]} 匹配的耦合器。`);
     }
 
     if (ioSeries === "td11") {
-      const powerQuantity = Math.max(0, Math.ceil(ioModuleQuantity / 16) - couplerQuantity);
+      const powerSegment = Math.max(1, Number(selectionRules.limits?.td11PowerSegment) || 16);
+      const powerQuantity = Math.max(0, Math.ceil(ioModuleQuantity / powerSegment) - couplerQuantity);
       if (powerQuantity > 0) {
-        addSmartRow(rows, items, "TD11-PS1AA13", powerQuantity, "电源中继", `每个耦合器后超过 16 个模块时增加电源中继`);
+        addSmartRow(rows, items, "TD11-PS1AA13", powerQuantity, "电源中继", `每个耦合器后超过 ${powerSegment} 个模块时增加电源中继`);
       }
     }
   }
@@ -1032,24 +1141,34 @@ function buildSmartRecommendation(req) {
 }
 
 function chooseSmartController(req) {
+  const configured = selectionRules.controllers || {};
   if (req.controllerFamily === "t3") {
     if (req.extensionProtocol !== "none") return "";
-    const base = req.protocol === "PN" ? "T324-XP-CD-10" : "T324-XE-CD-10";
-    return req.coating ? `${base}/C` : base;
+    const rules = configured.t3 || {};
+    const base = req.protocol === "PN" ? (rules.pn || "T324-XP-CD-10") : (rules.default || "T324-XE-CD-10");
+    return req.coating ? `${base}${rules.coatingSuffix || "/C"}` : base;
   }
   if (req.controllerFamily === "redundant") {
     if (["PN", "RN"].includes(req.extensionProtocol)) return "";
-    return req.protocol === "DP" || req.extensionProtocol === "DP" ? "T426EH-XEP-Z1-10" : "T426EH-XEP-Z0-10";
+    const rules = configured.redundant || {};
+    return req.protocol === "DP" || req.extensionProtocol === "DP"
+      ? (rules.dp || "T426EH-XEP-Z1-10")
+      : (rules.default || "T426EH-XEP-Z0-10");
   }
+  const rules = configured.t4 || {};
   if (req.extensionProtocol === "RN") {
-    return req.protocol === "DP" ? "T426E-XEP-Z1-10/1PN1RN1DP" : "T426E-XEP-Z0-10/1RN";
+    return req.protocol === "DP"
+      ? (rules.rnDp || "T426E-XEP-Z1-10/1PN1RN1DP")
+      : (rules.rn || "T426E-XEP-Z0-10/1RN");
   }
-  if (req.protocol === "DP" || req.extensionProtocol === "DP") return "T426E-XEP-Z1-10/1PN1DP";
-  if (req.extensionProtocol === "PN") return "T426E-XEP-Z0-10/1PN";
-  return "T426-XEP-10";
+  if (req.protocol === "DP" || req.extensionProtocol === "DP") return rules.dp || "T426E-XEP-Z1-10/1PN1DP";
+  if (req.extensionProtocol === "PN") return rules.extensionPN || "T426E-XEP-Z0-10/1PN";
+  return rules.default || "T426-XEP-10";
 }
 
 function chooseSmartCoupler(series, protocol) {
+  const configured = selectionRules.couplers?.[series]?.[protocol];
+  if (configured) return configured;
   const models = {
     tm30: { PN: "TM30-C1PN-10", EC: "TM30-C1EC-10" },
     td11: { PN: "TD11-C2PNT13", EC: "TD11-C2ECT13", DP: "TD11-C2DPT13", TCP: "TD11-C2TCP13" },
@@ -1058,6 +1177,26 @@ function chooseSmartCoupler(series, protocol) {
 }
 
 function getSmartModuleDefinitions(series, req) {
+  const configured = selectionRules.modules?.[series];
+  if (configured) {
+    const resolve = (definition, variant) => {
+      if (!definition) return undefined;
+      if (definition.model) return definition;
+      return definition[variant] || definition.PNP || definition.current || Object.values(definition)[0];
+    };
+    return {
+      di: resolve(configured.di, req.digitalType),
+      dq: resolve(configured.dq, req.digitalType),
+      ai: resolve(configured.ai, req.analogType),
+      aq: resolve(configured.aq, req.analogType),
+      rtd: resolve(configured.rtd),
+      tc: resolve(configured.tc),
+      hsc: resolve(configured.hsc),
+      encoder: resolve(configured.encoder),
+      pulse: resolve(configured.pulse),
+      serial: resolve(configured.serial),
+    };
+  }
   if (series === "tm30") {
     return {
       di: { model: req.digitalType === "NPN" ? "TM30-DI16-NN-20" : "TM30-DI16-PP-20", capacity: 16 },
@@ -1086,14 +1225,17 @@ function getSmartModuleDefinitions(series, req) {
 
 function chooseSmartHmi(req) {
   if (req.hmiSize === "none") return "";
-  if (req.hmiAi && req.hmiSize !== "7") return `TH32-${req.hmiSize}RT-10`;
+  const configured = selectionRules.hmi || {};
+  if (req.hmiAi && req.hmiSize !== "7") {
+    return configured.ai?.[req.hmiSize] || `TH32-${req.hmiSize}RT-10`;
+  }
   const standard = {
     7: "TH22-07RT-20",
     10: "TH22-10RT-20",
     12: "TH22-12RT-20",
     15: "TH22-15RT-20",
   };
-  return standard[req.hmiSize] || "";
+  return configured.standard?.[req.hmiSize] || standard[req.hmiSize] || "";
 }
 
 function addSmartRow(rows, items, model, qty, role, basis) {
@@ -1556,24 +1698,27 @@ function getTotals(selected) {
 
 function getWarnings(totals) {
   const warnings = [];
+  const modulesPerCoupler = Math.max(1, Number(selectionRules.limits?.modulesPerCoupler) || 32);
+  const td11PowerSegment = Math.max(1, Number(selectionRules.limits?.td11PowerSegment) || 16);
+  const td11FastPerCoupler = Math.max(1, Number(selectionRules.limits?.td11FastPerCoupler) || 4);
   if ((totals.tm30Module || 0) > 0 && (totals.tm30Coupler || 0) === 0) {
     warnings.push("已选择 TM30 I/O 模块，但未选择 TM30 耦合器。");
   }
-  if ((totals.tm30Coupler || 0) > 0 && (totals.tm30Module || 0) > totals.tm30Coupler * 32) {
-    warnings.push(`TM30 单个耦合器最多支持 32 个 I/O 模块；当前 ${totals.tm30Module} 个模块 / ${totals.tm30Coupler} 个耦合器。`);
+  if ((totals.tm30Coupler || 0) > 0 && (totals.tm30Module || 0) > totals.tm30Coupler * modulesPerCoupler) {
+    warnings.push(`TM30 单个耦合器最多支持 ${modulesPerCoupler} 个 I/O 模块；当前 ${totals.tm30Module} 个模块 / ${totals.tm30Coupler} 个耦合器。`);
   }
   if ((totals.td11Module || 0) > 0 && (totals.td11Coupler || 0) === 0) {
     warnings.push("已选择 TD11 I/O 模块，但未选择 TD11 耦合器。");
   }
-  if ((totals.td11Coupler || 0) > 0 && (totals.td11Module || 0) > totals.td11Coupler * 32) {
-    warnings.push(`TD11 单个耦合器最多支持 32 个 I/O 模块；当前 ${totals.td11Module} 个模块 / ${totals.td11Coupler} 个耦合器。`);
+  if ((totals.td11Coupler || 0) > 0 && (totals.td11Module || 0) > totals.td11Coupler * modulesPerCoupler) {
+    warnings.push(`TD11 单个耦合器最多支持 ${modulesPerCoupler} 个 I/O 模块；当前 ${totals.td11Module} 个模块 / ${totals.td11Coupler} 个耦合器。`);
   }
-  const requiredTd11Power = Math.max(0, Math.ceil((totals.td11Module || 0) / 16) - (totals.td11Coupler || 0));
+  const requiredTd11Power = Math.max(0, Math.ceil((totals.td11Module || 0) / td11PowerSegment) - (totals.td11Coupler || 0));
   if ((totals.td11Coupler || 0) > 0 && (totals.td11Power || 0) < requiredTd11Power) {
     warnings.push(`当前 TD11 模块数量建议至少配置 ${requiredTd11Power} 个 TD11-PS1AA13 电源中继模块。`);
   }
-  if ((totals.td11Coupler || 0) > 0 && (totals.td11FastModule || 0) > totals.td11Coupler * 4) {
-    warnings.push("TD11 高速计数 / SSI 模块手册建议单个耦合器后不超过 4 个。");
+  if ((totals.td11Coupler || 0) > 0 && (totals.td11FastModule || 0) > totals.td11Coupler * td11FastPerCoupler) {
+    warnings.push(`TD11 高速计数 / SSI 模块手册建议单个耦合器后不超过 ${td11FastPerCoupler} 个。`);
   }
   return warnings;
 }
@@ -1656,10 +1801,82 @@ function duplicateActiveConfiguration() {
   showToast("已复制当前配置方案");
 }
 
+function openShareDialog() {
+  if (!state.features.cloudSave) {
+    showToast("云端方案功能当前已关闭");
+    return;
+  }
+  const active = getActiveConfiguration();
+  el.shareProjectTitle.value = active.name;
+  el.shareProjectNote.value = "";
+  el.shareResult.hidden = true;
+  el.shareUrl.value = "";
+  el.openShareBtn.href = "#";
+  el.shareStatus.textContent = `${state.configurations.length} 个配置方案将保存为云端快照`;
+  el.submitShareBtn.disabled = false;
+  el.shareDialog.showModal();
+  window.requestAnimationFrame(() => el.shareProjectTitle.select());
+}
+
+async function saveProjectToCloud(event) {
+  event.preventDefault();
+  const title = el.shareProjectTitle.value.trim();
+  if (!title) {
+    el.shareProjectTitle.focus();
+    return;
+  }
+
+  el.submitShareBtn.disabled = true;
+  el.shareStatus.textContent = "正在保存…";
+  try {
+    const response = await fetch(`${API_BASE}/projects`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        title,
+        note: el.shareProjectNote.value.trim(),
+        catalogVersion: state.catalogVersion,
+        activeConfigId: state.activeConfigId,
+        configurations: state.configurations,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "云端保存失败");
+
+    state.cloudProjectId = payload.id;
+    el.shareUrl.value = payload.url;
+    el.openShareBtn.href = payload.url;
+    el.shareResultTitle.textContent = payload.title;
+    el.shareResult.hidden = false;
+    el.shareStatus.textContent = "云端快照已生成";
+    showToast("方案已保存到云端");
+  } catch (error) {
+    el.shareStatus.textContent = error.message || "云端保存失败";
+  } finally {
+    el.submitShareBtn.disabled = false;
+  }
+}
+
+async function copyShareUrl() {
+  if (!el.shareUrl.value) return;
+  try {
+    await navigator.clipboard.writeText(el.shareUrl.value);
+  } catch {
+    el.shareUrl.select();
+    document.execCommand("copy");
+  }
+  el.shareStatus.textContent = "共享链接已复制";
+  showToast("共享链接已复制");
+}
+
 function backupConfigurations() {
   const payload = {
     format: "tianxing-plc-selector",
     version: 1,
+    catalogVersion: state.catalogVersion,
     exportedAt: new Date().toISOString(),
     activeConfigId: state.activeConfigId,
     configurations: state.configurations,

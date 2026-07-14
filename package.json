@@ -2,12 +2,8 @@
   "name": "tianxing-plc-selector",
   "version": "1.0.0",
   "private": true,
-  "description": "天行 PLC 选型配置静态网页",
+  "description": "天行 PLC 选型配置前端",
   "scripts": {
-    "check": "node --check app.js",
-    "deploy": "wrangler deploy"
-  },
-  "devDependencies": {
-    "wrangler": "^4.110.0"
+    "check": "node --check app.js && node --check admin.js"
   }
 }
