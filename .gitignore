@@ -1,4 +1,6 @@
 node_modules/
+.wrangler/
+.wrangler-preview/
 .DS_Store
 Thumbs.db
 *.log
