@@ -601,12 +601,29 @@ select { height: 40px; min-width: 140px; border: 1px solid var(--line-dark); bor
 
 @media (max-width: 720px) {
   body { padding-bottom: calc(70px + env(safe-area-inset-bottom)); font-size: 13px; }
-  .topbar { min-height: 0; padding: 13px; gap: 13px; }
+  .topbar { min-height: 0; padding: 13px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: 10px; row-gap: 13px; }
+  .brand-block { grid-column: 1; grid-row: 1; min-width: 0; }
+  .brand-block > div:last-child { min-width: 0; }
   .brand-mark { width: 43px; height: 43px; flex-basis: 43px; font-size: 16px; }
-  .brand-kicker { font-size: 8px; }
-  .topbar h1 { font-size: 17px; }
+  .brand-kicker { overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar h1 { overflow-wrap: anywhere; font-size: clamp(15px,4.3vw,17px); }
   .topbar p { display: none; }
-  .top-actions { display: grid; grid-template-columns: repeat(3,1fr); }
+  .topbar-wechat-qr {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    width: clamp(48px,13vw,56px);
+    height: clamp(48px,13vw,56px);
+    flex: none;
+    display: block;
+    margin: 0;
+    padding: 2px;
+    border-radius: 7px;
+    touch-action: manipulation;
+  }
+  .topbar-wechat-qr::before, .topbar-wechat-qr::after { inset: 6px; }
+  .top-actions { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(3,1fr); }
   .theme-switcher { grid-column: 1 / -1; width: 100%; height: 42px; display: grid; grid-template-columns: repeat(2,1fr); }
   .theme-switcher button { justify-content: center; }
   .creator-badge { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid #374652; padding: 0 0 8px; }
@@ -696,10 +713,11 @@ select { height: 40px; min-width: 140px; border: 1px solid var(--line-dark); bor
   .metric-list { grid-template-columns: 1fr 1fr; }
   .disclaimer { padding: 4px 12px 18px; flex-direction: column; gap: 8px; }
   .disclaimer p { text-align: left; }
-  .feedback-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; }
+  .feedback-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; }
   .feedback-dialog-header { padding: 15px; }
-  .feedback-dialog-body { padding: 16px; grid-template-columns: 1fr; }
-  .wechat-card { width: min(100%, 250px); justify-self: center; }
+  .feedback-dialog-body { padding: 16px; grid-template-columns: 1fr; gap: 14px; }
+  .wechat-card { width: min(100%, 250px); grid-row: 1; justify-self: center; }
+  .feedback-dialog-copy { grid-row: 2; }
   .toast { right: 16px; bottom: 16px; }
   .smart-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
   .smart-dialog form { max-height: calc(100vh - 18px); }
@@ -1117,6 +1135,7 @@ body::before {
   .overview-metric-list { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .overview-metric-list div { min-height: 45px; border-bottom: 1px solid rgba(182,208,209,.11); }
   .overview-detail-popover {
+    display: none;
     position: fixed;
     top: auto;
     right: 8px;
@@ -1129,6 +1148,8 @@ body::before {
     padding: 11px;
     overscroll-behavior: contain;
   }
+  .overview-detail-trigger:disabled { cursor: default; }
+  .overview-detail-trigger:disabled::after { display: none; }
   .overview-detail-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .config-panel .config-warning-list { max-height: none; padding-right: 0; overflow: visible; }
   .share-dialog { width: calc(100vw - 16px); }

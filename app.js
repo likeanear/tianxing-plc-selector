@@ -694,6 +694,22 @@ function renderFamilyControls() {
 }
 
 function bindEvents() {
+  const mobileOverviewQuery = window.matchMedia("(max-width: 720px)");
+  const syncOverviewDetailAvailability = () => {
+    const disabled = mobileOverviewQuery.matches;
+    el.overviewDetailTrigger.disabled = disabled;
+    el.overviewDetailTrigger.setAttribute("aria-disabled", String(disabled));
+    el.overviewDetailTrigger.title = disabled ? "手机端暂不展开完整统计" : "查看完整配置统计";
+    if (disabled) setOverviewDetailExpanded(false);
+  };
+
+  syncOverviewDetailAvailability();
+  if (typeof mobileOverviewQuery.addEventListener === "function") {
+    mobileOverviewQuery.addEventListener("change", syncOverviewDetailAvailability);
+  } else {
+    mobileOverviewQuery.addListener(syncOverviewDetailAvailability);
+  }
+
   el.mobileQuickNav.addEventListener("click", (event) => {
     const button = event.target.closest("[data-scroll-target]");
     if (!button) return;
@@ -843,6 +859,7 @@ function bindEvents() {
 
   el.smartSelectBtn.addEventListener("click", openSmartSelector);
   el.overviewDetailTrigger.addEventListener("click", () => {
+    if (mobileOverviewQuery.matches) return;
     setOverviewDetailExpanded(!el.overviewMetrics.classList.contains("is-expanded"));
   });
   el.checkBarToggle.addEventListener("click", () => {
