@@ -385,7 +385,66 @@ select { height: 40px; min-width: 140px; border: 1px solid var(--line-dark); bor
 .feedback-dialog-copy li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); }
 .feedback-dialog-copy p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .wechat-card { width: 230px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; text-align: center; }
-.wechat-card img { display: block; width: 100%; height: auto; border-radius: 4px; }
+.wechat-qr-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f0f7ff;
+  box-shadow:
+    inset 0 0 0 1px rgba(226,240,255,.96),
+    0 0 18px rgba(104,205,255,.2),
+    0 0 30px rgba(172,110,255,.12);
+}
+.wechat-qr-surface::before {
+  content: "";
+  position: absolute;
+  inset: 6.98%;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 18% 24%, rgba(200,246,255,.98) 0 10%, transparent 34%),
+    radial-gradient(circle at 82% 20%, rgba(204,217,255,.97) 0 12%, transparent 38%),
+    radial-gradient(circle at 74% 82%, rgba(225,204,255,.98) 0 13%, transparent 40%),
+    radial-gradient(circle at 22% 78%, rgba(255,202,235,.96) 0 10%, transparent 36%),
+    linear-gradient(135deg, #dff9ff 0%, #d8d8ff 42%, #ffd7ed 72%, #fff0c9 100%);
+  background-position: 0% 10%, 100% 0%, 100% 100%, 0% 100%, 50% 50%;
+  background-repeat: no-repeat;
+  background-size: 170% 170%, 160% 160%, 175% 175%, 165% 165%, 100% 100%;
+  animation: qrNebulaFlow 24s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.wechat-qr-surface::after {
+  content: "";
+  position: absolute;
+  inset: 6.98%;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 17% 23%, rgba(255,255,255,.96) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 43% 38%, rgba(255,255,255,.9) 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 73% 17%, rgba(255,255,255,.9) 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 92% 32%, rgba(255,255,255,.94) 0 .9px, transparent 1.5px),
+    radial-gradient(circle at 86% 61%, rgba(255,255,255,.92) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 57% 83%, rgba(255,255,255,.9) 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 38% 90%, rgba(255,255,255,.94) 0 .9px, transparent 1.5px),
+    radial-gradient(circle at 24% 72%, rgba(255,255,255,.94) 0 .9px, transparent 1.5px),
+    radial-gradient(circle at 8% 54%, rgba(255,255,255,.9) 0 .8px, transparent 1.4px);
+  opacity: .6;
+  pointer-events: none;
+}
+.wechat-qr-surface img {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  opacity: 1;
+  filter: none;
+  transform: none;
+  clip-path: none;
+  mix-blend-mode: darken;
+}
 .wechat-card figcaption { padding: 8px 4px 2px; color: #476168; font-size: 12px; font-weight: 700; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 50; max-width: min(360px, calc(100vw - 32px)); padding: 11px 14px; border-radius: 5px; color: #fff; background: var(--navy); box-shadow: 0 12px 30px rgba(0,0,0,.24); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; }
 .toast.is-visible { opacity: 1; transform: translateY(0); }
@@ -673,13 +732,13 @@ select { height: 40px; min-width: 140px; border: 1px solid var(--line-dark); bor
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
-  .topbar-wechat-qr::before, .topbar-wechat-qr::after { animation: none !important; }
+  .topbar-wechat-qr::before, .topbar-wechat-qr::after, .wechat-qr-surface::before, .wechat-qr-surface::after { animation: none !important; }
 }
 
 @media (forced-colors: active) {
-  .topbar-wechat-qr { background: #fff; box-shadow: none; }
-  .topbar-wechat-qr::before, .topbar-wechat-qr::after { display: none; }
-  .topbar-wechat-qr img { mix-blend-mode: normal; }
+  .topbar-wechat-qr, .wechat-qr-surface { background: #fff; box-shadow: none; }
+  .topbar-wechat-qr::before, .topbar-wechat-qr::after, .wechat-qr-surface::before, .wechat-qr-surface::after { display: none; }
+  .topbar-wechat-qr img, .wechat-qr-surface img { mix-blend-mode: normal; }
 }
 
 /* Dark technology cockpit theme */
