@@ -456,6 +456,7 @@ const el = {
   checkPreview: document.querySelector("#checkPreview"),
   checkToggleText: document.querySelector("#checkToggleText"),
   exportBtn: document.querySelector("#exportBtn"),
+  wechatQrBtn: document.querySelector("#wechatQrBtn"),
   feedbackBtn: document.querySelector("#feedbackBtn"),
   backupBtn: document.querySelector("#backupBtn"),
   importBtn: document.querySelector("#importBtn"),
@@ -847,6 +848,7 @@ function bindEvents() {
   el.checkBarToggle.addEventListener("click", () => {
     setCheckBarExpanded(!el.checkPanel.classList.contains("is-expanded"));
   });
+  el.wechatQrBtn.addEventListener("click", () => el.feedbackDialog.showModal());
   el.feedbackBtn.addEventListener("click", () => el.feedbackDialog.showModal());
   el.closeSmartBtn.addEventListener("click", () => el.smartDialog.close());
   el.cancelSmartBtn.addEventListener("click", () => el.smartDialog.close());
