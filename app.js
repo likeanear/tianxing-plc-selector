@@ -449,6 +449,7 @@ const el = {
   overviewDetailTitle: document.querySelector("#overviewDetailTitle"),
   overviewDetailCount: document.querySelector("#overviewDetailCount"),
   overviewDetailMetrics: document.querySelector("#overviewDetailMetrics"),
+  compatibilityStats: document.querySelector("#compatibilityStats"),
   warningList: document.querySelector("#warningList"),
   checkSummaryStat: document.querySelector("#checkSummaryStat"),
   checkPanel: document.querySelector(".config-check-panel"),
@@ -566,6 +567,34 @@ let remoteIoCompatibility = {
   },
 };
 
+const compatibilityDefaults = {
+  series: {
+    tm30: {
+      label: "TM30",
+      moduleMetric: "tm30Module",
+      couplerMetric: "tm30Coupler",
+      couplers: { PN: "TM30-C1PN-10", EC: "TM30-C1EC-10" },
+      powerRelayModel: "TM30-PS02-24-10",
+    },
+    td11: {
+      label: "TD11",
+      moduleMetric: "td11Module",
+      couplerMetric: "td11Coupler",
+      couplers: { PN: "TD11-C2PNT13", EC: "TD11-C2ECT13", DP: "TD11-C2DPT13", TCP: "TD11-C2TCP13" },
+      powerRelayModel: "TD11-PS1AA13",
+      bundledAccessoryModel: "TD11-AX1END3",
+    },
+  },
+  couplerProtocols: {
+    "TM30-C1PN-10": "PN",
+    "TM30-C1EC-10": "EC",
+    "TD11-C2PNT13": "PN",
+    "TD11-C2ECT13": "EC",
+    "TD11-C2DPT13": "DP",
+    "TD11-C2TCP13": "TCP",
+  },
+};
+
 let selectionRules = {
   limits: {
     modulesPerCoupler: 32,
@@ -575,6 +604,7 @@ let selectionRules = {
   protocolLabels: { PN: "PROFINET", EC: "EtherCAT", DP: "PROFIBUS DP", TCP: "Modbus TCP / S7-TCP" },
   extensionLabels: { none: "不需要", PN: "PROFINET", DP: "PROFIBUS DP", RN: "RapidNet" },
   remoteIoCompatibility,
+  compatibility: compatibilityDefaults,
 };
 
 void init();
@@ -865,6 +895,22 @@ function bindEvents() {
   el.checkBarToggle.addEventListener("click", () => {
     setCheckBarExpanded(!el.checkPanel.classList.contains("is-expanded"));
   });
+  el.warningList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-compat-action]");
+    if (!button) return;
+    const model = button.dataset.model;
+    if (!PRODUCTS.some((product) => product.model === model)) return;
+    const action = button.dataset.compatAction;
+    const quantity = Math.max(1, Number(button.dataset.qty) || 1);
+    if (action === "add") {
+      setQty(model, getQty(model) + quantity);
+      showToast(`${model} 已补入当前方案 ×${quantity}`);
+    }
+    if (action === "remove") {
+      setQty(model, 0);
+      showToast(`${model} 已从当前方案移除`);
+    }
+  });
   el.wechatQrBtn.addEventListener("click", () => el.feedbackDialog.showModal());
   el.feedbackBtn.addEventListener("click", () => el.feedbackDialog.showModal());
   el.closeSmartBtn.addEventListener("click", () => el.smartDialog.close());
@@ -1116,20 +1162,28 @@ function buildSmartRecommendation(req) {
     .reduce((sum, row) => sum + row.qty, 0);
   if (ioDemand && ioModuleQuantity > 0 && errors.length === 0) {
     const modulesPerCoupler = Math.max(1, Number(selectionRules.limits?.modulesPerCoupler) || 32);
-    const couplerQuantity = Math.ceil(ioModuleQuantity / modulesPerCoupler);
+    let couplerQuantity = Math.ceil(ioModuleQuantity / modulesPerCoupler);
+    let powerQuantity = 0;
+    if (ioSeries === "td11") {
+      const powerSegment = Math.max(1, Number(selectionRules.limits?.td11PowerSegment) || 16);
+      while (true) {
+        powerQuantity = Math.max(0, Math.ceil(ioModuleQuantity / powerSegment) - couplerQuantity);
+        if (ioModuleQuantity + powerQuantity <= couplerQuantity * modulesPerCoupler) break;
+        couplerQuantity += 1;
+      }
+    }
+
     const couplerModel = chooseSmartCoupler(ioSeries, req.protocol);
     if (couplerModel) {
-      addSmartRow(rows, items, couplerModel, couplerQuantity, "总线耦合器", `${ioModuleQuantity} 个 I/O 模块，按每站最多 ${modulesPerCoupler} 个模块计算`);
+      const occupiedSlots = ioModuleQuantity + powerQuantity;
+      addSmartRow(rows, items, couplerModel, couplerQuantity, "总线耦合器", `${occupiedSlots} 个模块槽位，按每站最多 ${modulesPerCoupler} 个模块计算`);
     } else {
       errors.push(`未找到 ${ioSeries.toUpperCase()} 与 ${protocolLabels[req.protocol]} 匹配的耦合器。`);
     }
 
-    if (ioSeries === "td11") {
+    if (powerQuantity > 0) {
       const powerSegment = Math.max(1, Number(selectionRules.limits?.td11PowerSegment) || 16);
-      const powerQuantity = Math.max(0, Math.ceil(ioModuleQuantity / powerSegment) - couplerQuantity);
-      if (powerQuantity > 0) {
-        addSmartRow(rows, items, "TD11-PS1AA13", powerQuantity, "电源中继", `每个耦合器后超过 ${powerSegment} 个模块时增加电源中继`);
-      }
+      addSmartRow(rows, items, "TD11-PS1AA13", powerQuantity, "电源中继", `每个耦合器后超过 ${powerSegment} 个模块时增加电源中继`);
     }
   }
 
@@ -1549,40 +1603,42 @@ function renderConfiguration() {
     })
     .join("");
 
-  const recommendations = getRecommendationMessages();
-  const warnings = getWarnings(totals);
-  const messages = [
-    ...recommendations.map((message) => ({ type: "info", text: message })),
-    ...warnings.map((message) => ({ type: "warn", text: message })),
-  ];
-  const checkStatus = selected.length === 0 ? "ready" : warnings.length ? "warn" : recommendations.length ? "info" : "ok";
-  el.checkPanel.dataset.status = checkStatus;
-  el.checkSummaryStat.textContent = selected.length === 0
-    ? "等待选型"
-    : warnings.length
-      ? `${warnings.length} 项待确认`
-      : recommendations.length
-        ? `${recommendations.length} 条选型建议`
-        : "检查通过";
-  el.checkPreview.textContent = selected.length === 0
-    ? "选择设备后实时检查数量和接口约束。"
-    : messages[0]?.text || "当前未发现数量或接口约束问题。";
-  el.warningList.innerHTML = messages.length
-    ? messages.map((message) => {
-        const isInfo = message.type === "info";
+  const compatibility = buildCompatibilityReport(selected);
+  el.checkPanel.dataset.status = compatibility.status;
+  el.checkSummaryStat.textContent = compatibility.summary;
+  el.checkPreview.textContent = compatibility.preview;
+  el.compatibilityStats.innerHTML = compatibility.stats
+    .map((stat) => `
+      <div data-tone="${escapeAttr(stat.tone)}">
+        <span>${escapeHtml(stat.label)}</span>
+        <strong>${escapeHtml(stat.value)}</strong>
+      </div>`)
+    .join("");
+  el.warningList.innerHTML = compatibility.checks.length
+    ? compatibility.checks.map((check) => {
+        const icons = { error: "×", warn: "!", info: "i", ok: "✓" };
         return `
-          <li class="${isInfo ? "info" : "warn"}">
-            <span class="check-message-icon" aria-hidden="true">${isInfo ? "i" : "!"}</span>
+          <li class="${escapeAttr(check.type)}">
+            <span class="check-message-icon" aria-hidden="true">${icons[check.type] || "i"}</span>
             <span class="check-message-copy">
-              <strong>${isInfo ? "选型建议" : "需要确认"}</strong>
-              <span>${escapeHtml(message.text)}</span>
+              <small>${escapeHtml(check.category)}</small>
+              <strong>${escapeHtml(check.title)}</strong>
+              <span>${escapeHtml(check.text)}</span>
+              ${check.action ? `
+                <button
+                  class="compatibility-action"
+                  type="button"
+                  data-compat-action="${escapeAttr(check.action.type)}"
+                  data-model="${escapeAttr(check.action.model)}"
+                  data-qty="${check.action.qty}"
+                >${escapeHtml(check.action.label)}</button>` : ""}
             </span>
           </li>`;
       }).join("")
     : `
-      <li class="ok">
-        <span class="check-message-icon" aria-hidden="true">✓</span>
-        <span class="check-message-copy"><strong>检查通过</strong><span>当前未发现数量或接口约束问题。</span></span>
+      <li class="ready">
+        <span class="check-message-icon" aria-hidden="true">·</span>
+        <span class="check-message-copy"><strong>等待选型</strong><span>加入设备后将自动生成兼容性报告。</span></span>
       </li>`;
 
   renderProgress(selected);
@@ -1591,7 +1647,7 @@ function renderConfiguration() {
 function renderOverview() {
   const selected = getSelectedProducts();
   const totalQty = selected.reduce((sum, item) => sum + item.qty, 0);
-  const warnings = getWarnings(getTotals(selected));
+  const compatibility = buildCompatibilityReport(selected);
   let healthText = "等待选型";
   let healthStatus = "ready";
   el.configCountStat.textContent = state.configurations.length;
@@ -1600,8 +1656,12 @@ function renderOverview() {
 
   if (selected.length === 0) {
     el.healthStat.classList.add("is-ready");
-  } else if (warnings.length > 0) {
-    healthText = `${warnings.length} 项待确认`;
+  } else if (compatibility.errors > 0) {
+    healthText = `${compatibility.errors} 项兼容冲突`;
+    healthStatus = "error";
+    el.healthStat.classList.add("is-error");
+  } else if (compatibility.warnings > 0) {
+    healthText = `${compatibility.warnings} 项待确认`;
     healthStatus = "warn";
     el.healthStat.classList.add("is-warn");
   } else {
@@ -1715,54 +1775,306 @@ function getTotals(selected) {
   }, {});
 }
 
-function getWarnings(totals) {
-  const warnings = [];
-  const modulesPerCoupler = Math.max(1, Number(selectionRules.limits?.modulesPerCoupler) || 32);
+function getCompatibilityRules() {
+  const configured = selectionRules.compatibility || {};
+  const configuredSeries = configured.series || {};
+  return {
+    series: Object.fromEntries(
+      Object.entries(compatibilityDefaults.series).map(([key, value]) => [
+        key,
+        {
+          ...value,
+          ...(configuredSeries[key] || {}),
+          couplers: { ...value.couplers, ...(configuredSeries[key]?.couplers || {}) },
+        },
+      ]),
+    ),
+    couplerProtocols: { ...compatibilityDefaults.couplerProtocols, ...(configured.couplerProtocols || {}) },
+  };
+}
+
+function getControllerExpansionCapacity(product) {
+  const capacity = { PN: 0, DP: 0, RN: 0, HM: 0 };
+  if (product.family === "T4 冗余控制器") {
+    capacity.HM = 1;
+    capacity.DP = /-Z2-/i.test(product.model) ? 2 : /-Z1-/i.test(product.model) ? 1 : 0;
+    return capacity;
+  }
+  if (product.family !== "T4 标准控制器" || !product.model.startsWith("T426E")) return capacity;
+  const suffix = product.model.split("/")[1] || "";
+  [...suffix.matchAll(/(\d+)(PN|DP|RN)/gi)].forEach((match) => {
+    capacity[match[2].toUpperCase()] += Number(match[1]);
+  });
+  return capacity;
+}
+
+function getCommModuleRequirements(product) {
+  return Object.fromEntries(
+    ["PN", "DP", "RN", "HM"].map((token) => [token, product.model.match(new RegExp(token, "gi"))?.length || 0]),
+  );
+}
+
+function getControllerNetworkTokens(product) {
+  const tokens = getNetworkTokens(product);
+  if (["T4 标准控制器", "T4 冗余控制器"].includes(product.family)) {
+    tokens.add("GE");
+    tokens.add("EC");
+    tokens.add("PN");
+  }
+  return tokens;
+}
+
+function chooseMissingCoupler(seriesKey, controllers) {
+  const seriesRule = getCompatibilityRules().series[seriesKey];
+  if (!seriesRule || controllers.length === 0) return "";
+  const controllerProtocols = new Set();
+  controllers.forEach((controller) => {
+    getControllerNetworkTokens(controller).forEach((token) => controllerProtocols.add(token));
+  });
+  return ["PN", "EC", "DP", "TCP"]
+    .map((protocol) => ({ protocol, model: seriesRule.couplers[protocol] }))
+    .find((item) => item.model && (item.protocol === "TCP" ? controllerProtocols.has("GE") : controllerProtocols.has(item.protocol)))?.model || "";
+}
+
+function calculateTd11Layout(nonPowerModules, couplerFloor, maxModulesPerCoupler, powerSegment) {
+  let couplers = Math.max(couplerFloor, nonPowerModules > 0 ? Math.ceil(nonPowerModules / maxModulesPerCoupler) : 0);
+  let powerRelays = 0;
+  while (couplers > 0) {
+    powerRelays = Math.max(0, Math.ceil(nonPowerModules / powerSegment) - couplers);
+    if (nonPowerModules + powerRelays <= couplers * maxModulesPerCoupler) break;
+    couplers += 1;
+  }
+  return { couplers, powerRelays };
+}
+
+function buildCompatibilityReport(selected) {
+  const rules = getCompatibilityRules();
+  const totals = getTotals(selected);
+  const checks = [];
+  const controllers = selected.filter((product) => product.metrics?.controller);
+  const commModules = selected.filter((product) => product.metrics?.commModule);
+  const controllerQuantity = controllers.reduce((sum, product) => sum + product.qty, 0);
+  const couplerQuantity = selected
+    .filter((product) => product.metrics?.coupler)
+    .reduce((sum, product) => sum + product.qty, 0);
+  const maxModulesPerCoupler = Math.max(1, Number(selectionRules.limits?.modulesPerCoupler) || 32);
   const td11PowerSegment = Math.max(1, Number(selectionRules.limits?.td11PowerSegment) || 16);
   const td11FastPerCoupler = Math.max(1, Number(selectionRules.limits?.td11FastPerCoupler) || 4);
-  if ((totals.tm30Module || 0) > 0 && (totals.tm30Coupler || 0) === 0) {
-    warnings.push("已选择 TM30 I/O 模块，但未选择 TM30 耦合器。");
-  }
-  if ((totals.tm30Coupler || 0) > 0 && (totals.tm30Module || 0) > totals.tm30Coupler * modulesPerCoupler) {
-    warnings.push(`TM30 单个耦合器最多支持 ${modulesPerCoupler} 个 I/O 模块；当前 ${totals.tm30Module} 个模块 / ${totals.tm30Coupler} 个耦合器。`);
-  }
-  if ((totals.td11Module || 0) > 0 && (totals.td11Coupler || 0) === 0) {
-    warnings.push("已选择 TD11 I/O 模块，但未选择 TD11 耦合器。");
-  }
-  if ((totals.td11Coupler || 0) > 0 && (totals.td11Module || 0) > totals.td11Coupler * modulesPerCoupler) {
-    warnings.push(`TD11 单个耦合器最多支持 ${modulesPerCoupler} 个 I/O 模块；当前 ${totals.td11Module} 个模块 / ${totals.td11Coupler} 个耦合器。`);
-  }
-  const requiredTd11Power = Math.max(0, Math.ceil((totals.td11Module || 0) / td11PowerSegment) - (totals.td11Coupler || 0));
-  if ((totals.td11Coupler || 0) > 0 && (totals.td11Power || 0) < requiredTd11Power) {
-    warnings.push(`当前 TD11 模块数量建议至少配置 ${requiredTd11Power} 个 TD11-PS1AA13 电源中继模块。`);
-  }
-  if ((totals.td11Coupler || 0) > 0 && (totals.td11FastModule || 0) > totals.td11Coupler * td11FastPerCoupler) {
-    warnings.push(`TD11 高速计数 / SSI 模块手册建议单个耦合器后不超过 ${td11FastPerCoupler} 个。`);
-  }
-  return warnings;
-}
+  const td11Rule = rules.series.td11;
+  const td11Couplers = Number(totals[td11Rule.couplerMetric] || 0);
+  const td11NonPowerModules = selected
+    .filter((product) => product.metrics?.td11Module && !product.metrics?.td11Power)
+    .reduce((sum, product) => sum + product.qty, 0);
+  const providedTd11Power = Number(totals.td11Power || 0);
+  const td11Layout = calculateTd11Layout(td11NonPowerModules, td11Couplers, maxModulesPerCoupler, td11PowerSegment);
+  let usedSlots = 0;
+  let slotCapacity = 0;
+  let hasSlotLayoutError = false;
 
-function getRecommendationMessages() {
-  return getActiveProtocolRecommendations().map((item) => {
-    const models = item.models.join("、");
-    return `当前选择包含 ${item.label} 通讯，后续远程 IO 可优先选择：${models}。`;
+  const addCheck = (type, category, title, text, action = null) => {
+    checks.push({ type, category, title, text, action });
+  };
+
+  if (selected.length === 0) {
+    return {
+      status: "ready",
+      summary: "等待选型",
+      preview: "选择设备后实时检查协议、槽位和缺失配件。",
+      stats: [
+        { label: "控制器", value: "未配置", tone: "ready" },
+        { label: "远程站", value: "0", tone: "ready" },
+        { label: "模块槽位", value: "0 / —", tone: "ready" },
+        { label: "扩展余量", value: "—", tone: "ready" },
+      ],
+      checks,
+      errors: 0,
+      warnings: 0,
+    };
+  }
+
+  if (controllers.length === 0) {
+    addCheck("error", "控制器", "缺少 PLC 控制器", "当前方案已有外围设备，但没有可用于协议校核的 CPU。请先选择控制器。 ");
+  } else if (controllers.length > 1) {
+    addCheck("warn", "控制器", "包含多个 CPU 型号", `当前共选择 ${controllers.length} 个 CPU 型号，协议能力按并集检查。若它们属于不同控制系统，建议拆分为多个配置方案。`);
+  } else {
+    addCheck("ok", "控制器", "CPU 已确认", `${controllers[0].model} 将作为当前配置的接口能力基准。`);
+  }
+
+  const controllerProtocols = new Set();
+  controllers.forEach((controller) => {
+    getControllerNetworkTokens(controller).forEach((token) => controllerProtocols.add(token));
   });
-}
 
-function getRecommendationMessagesForSelection(selected) {
-  const protocols = new Set();
-  selected.forEach((product) => {
-    if (!product.metrics?.controller && !product.metrics?.commModule) return;
-    const tokens = getNetworkTokens(product);
-    Object.keys(remoteIoCompatibility).forEach((protocol) => {
-      if (tokens.has(protocol)) protocols.add(protocol);
+  Object.entries(rules.series).forEach(([seriesKey, seriesRule]) => {
+    const moduleCount = Number(totals[seriesRule.moduleMetric] || 0);
+    const seriesCouplerCount = Number(totals[seriesRule.couplerMetric] || 0);
+    const seriesCouplers = selected.filter((product) => product.metrics?.[seriesRule.couplerMetric]);
+    const capacity = seriesCouplerCount * maxModulesPerCoupler;
+    const requiredCouplerCount = Math.max(
+      Math.ceil(moduleCount / maxModulesPerCoupler),
+      seriesKey === "td11" ? td11Layout.couplers : 0,
+    );
+    usedSlots += moduleCount;
+    slotCapacity += capacity;
+
+    if (moduleCount > 0 && seriesCouplerCount === 0) {
+      const missingQuantity = requiredCouplerCount;
+      const missingModel = chooseMissingCoupler(seriesKey, controllers);
+      const action = missingModel
+        ? { type: "add", model: missingModel, qty: missingQuantity, label: `补齐 ${missingModel} ×${missingQuantity}` }
+        : null;
+      addCheck(
+        "error",
+        "远程 I/O",
+        `${seriesRule.label} 缺少耦合器`,
+        `已选 ${moduleCount} 个 ${seriesRule.label} 扩展模块，但没有同系列耦合器。${missingModel ? `按当前 CPU 接口可使用 ${missingModel}。` : "请先确认 CPU 主通讯协议。"}`,
+        action,
+      );
+    }
+
+    if (seriesCouplerCount > 0 && moduleCount === 0) {
+      addCheck("warn", "远程 I/O", `${seriesRule.label} 远程站尚未配置模块`, `已选 ${seriesCouplerCount} 个耦合器，但其后没有 ${seriesRule.label} I/O 或电源模块。`);
+    }
+
+    if (seriesCouplerCount > 0 && requiredCouplerCount > seriesCouplerCount) {
+      hasSlotLayoutError = true;
+      const missingQuantity = requiredCouplerCount - seriesCouplerCount;
+      const selectedModels = [...new Set(seriesCouplers.map((product) => product.model))];
+      const missingModel = selectedModels.length === 1 ? selectedModels[0] : chooseMissingCoupler(seriesKey, controllers);
+      const action = missingModel
+        ? { type: "add", model: missingModel, qty: missingQuantity, label: `增加 ${missingModel} ×${missingQuantity}` }
+        : null;
+      const currentRequiredPower = seriesKey === "td11"
+        ? Math.max(0, Math.ceil(td11NonPowerModules / td11PowerSegment) - seriesCouplerCount)
+        : 0;
+      const projectedSlots = seriesKey === "td11"
+        ? td11NonPowerModules + Math.max(providedTd11Power, currentRequiredPower)
+        : moduleCount;
+      addCheck(
+        "error",
+        "槽位容量",
+        `${seriesRule.label} 模块超过耦合器上限`,
+        `按当前供电分段预计占用 ${projectedSlots} / ${capacity} 个槽位，至少需要 ${requiredCouplerCount} 个耦合器；单站最多带 ${maxModulesPerCoupler} 个扩展模块。`,
+        action,
+      );
+    } else if (seriesCouplerCount > 0 && moduleCount > 0) {
+      const remaining = capacity - moduleCount;
+      addCheck(
+        remaining <= 4 ? "warn" : "ok",
+        "槽位容量",
+        `${seriesRule.label} 槽位 ${moduleCount} / ${capacity}`,
+        remaining > 0 ? `当前仍可扩展 ${remaining} 个模块槽位。` : "当前没有剩余模块槽位，继续扩展需要增加远程站。",
+      );
+    }
+
+    seriesCouplers.forEach((coupler) => {
+      const protocol = rules.couplerProtocols[coupler.model];
+      if (!protocol || controllers.length === 0) return;
+      const protocolLabel = selectionRules.protocolLabels?.[protocol] || protocol;
+      if (protocol === "TCP") {
+        if (!controllerProtocols.has("GE")) {
+          addCheck("error", "接口协议", `${coupler.model} 缺少控制器侧以太网接口`, "该 TCP 耦合器需要控制器侧具备可用以太网接口。 ");
+        } else {
+          addCheck("warn", "接口协议", `${protocolLabel} 需工程确认`, `${coupler.model} 可接入以太网，但控制器侧具体协议授权、连接资源和工程配置仍需确认。`);
+        }
+      } else if (!controllerProtocols.has(protocol)) {
+        addCheck("error", "接口协议", `${protocolLabel} 接口不匹配`, `${coupler.model} 需要 ${protocolLabel}，当前所选 CPU 型号未显示对应接口。`);
+      } else {
+        addCheck("ok", "接口协议", `${protocolLabel} 接口匹配`, `${coupler.model} 与当前 CPU 的 ${protocolLabel} 接口能力一致。`);
+      }
     });
   });
 
-  return [...protocols].map((protocol) => {
-    const item = remoteIoCompatibility[protocol];
-    return `当前选择包含 ${item.label} 通讯，后续远程 IO 可优先选择：${item.models.join("、")}。`;
+  commModules.forEach((module) => {
+    const matchingControllers = controllers.filter((controller) => controller.family === module.family);
+    if (matchingControllers.length === 0) {
+      addCheck("error", "通讯模块", `${module.model} 系列不匹配`, `该通讯模块备件属于${module.family}，当前没有选择同系列 CPU。`);
+      return;
+    }
+    const requiredCapacity = getCommModuleRequirements(module);
+    const compatibleController = matchingControllers.find((controller) => {
+      const availableCapacity = getControllerExpansionCapacity(controller);
+      return Object.entries(requiredCapacity).every(([token, quantity]) => availableCapacity[token] >= quantity);
+    });
+    if (!compatibleController) {
+      addCheck("error", "通讯模块", `${module.model} 与 CPU 扩展配置不一致`, "通讯模块上的扩展接口组合未在当前同系列 CPU 型号中找到对应配置。");
+    } else {
+      addCheck("info", "通讯模块", `${module.model} 备件匹配`, `与 ${compatibleController.model} 的扩展接口组合一致；该产品为通讯模块备件，不会额外增加 CPU 接口数量。`);
+    }
   });
+
+  const requiredTd11Power = td11Layout.powerRelays;
+  if (requiredTd11Power > providedTd11Power) {
+    const missingQuantity = requiredTd11Power - providedTd11Power;
+    addCheck(
+      "warn",
+      "缺失配件",
+      "TD11 电源中继不足",
+      `${td11NonPowerModules} 个扩展模块按每段 ${td11PowerSegment} 个估算，至少需要 ${requiredTd11Power} 个 ${td11Rule.powerRelayModel}，当前已配置 ${providedTd11Power} 个。`,
+      { type: "add", model: td11Rule.powerRelayModel, qty: missingQuantity, label: `补齐 ${td11Rule.powerRelayModel} ×${missingQuantity}` },
+    );
+  } else if (requiredTd11Power > 0) {
+    addCheck("ok", "供电分段", "TD11 电源中继数量满足规则", `已配置 ${providedTd11Power} 个 ${td11Rule.powerRelayModel}，规则估算至少需要 ${requiredTd11Power} 个。`);
+  }
+
+  if (td11Couplers > 0 && Number(totals.td11FastModule || 0) > td11Couplers * td11FastPerCoupler) {
+    addCheck("warn", "高速模块", "TD11 高速模块密度需确认", `高速计数 / SSI 模块共 ${totals.td11FastModule} 个，超过每个耦合器 ${td11FastPerCoupler} 个的规则建议。`);
+  }
+
+  const bundledAccessoryQuantity = selected
+    .filter((product) => product.model === td11Rule.bundledAccessoryModel)
+    .reduce((sum, product) => sum + product.qty, 0);
+  if (td11Couplers > 0 && bundledAccessoryQuantity > 0) {
+    addCheck(
+      "warn",
+      "辅件",
+      "终端盖板可能重复配置",
+      `${td11Rule.bundledAccessoryModel} 随 TD11 耦合器配套发货，通常无需额外订购。`,
+      { type: "remove", model: td11Rule.bundledAccessoryModel, qty: bundledAccessoryQuantity, label: "移除额外终端盖板" },
+    );
+  } else if (td11Couplers > 0) {
+    addCheck("info", "辅件", "终端盖板无需单独补齐", `${td11Rule.bundledAccessoryModel} 随 TD11 耦合器配套发货，当前未计入额外采购。`);
+  } else if (bundledAccessoryQuantity > 0) {
+    addCheck(
+      "warn",
+      "辅件",
+      "终端盖板没有对应 TD11 耦合器",
+      `当前单独选择了 ${td11Rule.bundledAccessoryModel}，但方案中没有 TD11 耦合器。`,
+      { type: "remove", model: td11Rule.bundledAccessoryModel, qty: bundledAccessoryQuantity, label: "移除孤立辅件" },
+    );
+  }
+
+  const tm30NonPowerModules = selected
+    .filter((product) => product.metrics?.tm30Module && product.model !== rules.series.tm30.powerRelayModel)
+    .reduce((sum, product) => sum + product.qty, 0);
+  const tm30PowerSelected = selected.some((product) => product.model === rules.series.tm30.powerRelayModel);
+  if (tm30NonPowerModules > 0 && !tm30PowerSelected) {
+    addCheck("info", "供电分段", "TM30 电源分段需按负载确认", "当前产品表未给出固定数量阈值，是否增加 TM30 电源中继需结合 24VDC 负载和现场分段设计确认。 ");
+  }
+
+  const order = { error: 0, warn: 1, info: 2, ok: 3 };
+  checks.sort((a, b) => order[a.type] - order[b.type]);
+  const errors = checks.filter((check) => check.type === "error").length;
+  const warnings = checks.filter((check) => check.type === "warn").length;
+  const status = errors ? "error" : warnings ? "warn" : "ok";
+  const headline = errors ? `${errors} 项兼容冲突` : warnings ? `${warnings} 项待确认` : "兼容性检查通过";
+  const previewCheck = checks.find((check) => ["error", "warn"].includes(check.type)) || checks[0];
+  const remainingSlots = slotCapacity - usedSlots;
+
+  return {
+    status,
+    summary: headline,
+    preview: previewCheck?.text || "当前未发现协议、槽位或配件问题。",
+    stats: [
+      { label: "控制器", value: controllerQuantity ? `${controllerQuantity} 台` : "未配置", tone: controllerQuantity ? "ok" : "error" },
+      { label: "远程站", value: `${couplerQuantity}`, tone: couplerQuantity ? "ok" : "ready" },
+      { label: "模块槽位", value: slotCapacity ? `${usedSlots} / ${slotCapacity}` : `${usedSlots} / —`, tone: usedSlots > slotCapacity || hasSlotLayoutError ? "error" : "ok" },
+      { label: "扩展余量", value: slotCapacity ? `${Math.max(0, remainingSlots)} 槽` : "—", tone: remainingSlots < 0 || hasSlotLayoutError ? "error" : remainingSlots <= 4 && slotCapacity ? "warn" : "ok" },
+    ],
+    checks,
+    errors,
+    warnings,
+  };
 }
 
 function getQty(model) {
@@ -2045,15 +2357,17 @@ function buildConfigurationSummaryRows(config) {
   const selected = getSelectedProductsForConfiguration(config);
   if (selected.length === 0) return [];
   const totals = getTotals(selected);
-  const warnings = getWarnings(totals);
-  const recommendations = getRecommendationMessagesForSelection(selected);
+  const compatibility = buildCompatibilityReport(selected);
+  const compatibilityMessages = compatibility.checks
+    .filter((check) => check.type !== "ok")
+    .map((check) => `${check.category}：${check.title} - ${check.text}`);
   return [
     [config.name, "型号数量", selected.length],
     [config.name, "总件数", selected.reduce((sum, item) => sum + item.qty, 0)],
     ...metricLabels
       .map(([key, label]) => [config.name, label, totals[key] || 0])
       .filter(([, , value]) => value > 0),
-    [config.name, "配置提醒", [...recommendations, ...warnings].join("；") || "当前未发现数量约束提醒"],
+    [config.name, "兼容性检查", compatibilityMessages.join("；") || "当前配置兼容性检查通过"],
   ];
 }
 

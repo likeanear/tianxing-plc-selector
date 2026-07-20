@@ -18,7 +18,7 @@
         document.documentElement.dataset.theme = "cyber";
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260716-pearl1" />
+    <link rel="stylesheet" href="styles.css?v=20260720-compat1" />
   </head>
   <body>
     <header class="topbar">
@@ -107,7 +107,7 @@
         </div>
         <div id="healthStat" class="health-stat is-ready">
           <span class="health-light"></span>
-          <div><small>配置检查</small><strong>等待选型</strong></div>
+          <div><small>兼容检查</small><strong>等待选型</strong></div>
         </div>
       </div>
     </section>
@@ -194,18 +194,19 @@
 
         <div id="progressTracker" class="progress-tracker" aria-label="配置进度"></div>
         <div id="cartList" class="cart-list"></div>
-        <section class="config-check-panel" aria-labelledby="liveCheckTitle">
+        <section class="config-check-panel" aria-labelledby="liveCheckTitle" data-status="ready">
           <button id="checkBarToggle" class="config-check-bar" type="button" aria-expanded="false" aria-controls="warningList">
             <span class="config-check-state">
               <i aria-hidden="true"></i>
-              <span><small id="liveCheckTitle">智能检查</small><strong id="checkSummaryStat">等待选型</strong></span>
+              <span><small id="liveCheckTitle">配置兼容性</small><strong id="checkSummaryStat">等待选型</strong></span>
             </span>
-            <span id="checkPreview" class="config-check-preview">选择设备后实时检查数量和接口约束。</span>
+            <span id="checkPreview" class="config-check-preview">选择设备后实时检查协议、槽位和缺失配件。</span>
             <span id="checkToggleText" class="config-check-toggle-text">展开</span>
             <span class="config-check-chevron" aria-hidden="true">⌃</span>
           </button>
           <div class="config-check-drawer">
-            <div class="config-check-drawer-head"><strong>检查详情</strong><span>实时更新</span></div>
+            <div class="config-check-drawer-head"><strong>兼容性详情</strong><span>基于当前产品手册与规则库</span></div>
+            <div id="compatibilityStats" class="compatibility-stats" aria-label="兼容性关键指标"></div>
             <ul id="warningList" class="warning-list config-warning-list" aria-live="polite"></ul>
           </div>
         </section>
@@ -417,6 +418,6 @@
     </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=20260716-mobile1"></script>
+    <script src="app.js?v=20260720-compat1"></script>
   </body>
 </html>

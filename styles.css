@@ -256,6 +256,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .health-stat strong { font-size: 12px; }
 .health-stat.is-ok .health-light { background: #56d691; box-shadow: 0 0 0 4px rgba(86,214,145,.14); }
 .health-stat.is-warn .health-light { background: var(--signal); box-shadow: 0 0 0 4px rgba(244,185,66,.14); }
+.health-stat.is-error .health-light { background: var(--danger); box-shadow: 0 0 0 4px rgba(183,70,70,.16); }
 
 .app-shell { max-width: 1680px; margin: 0 auto; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 16px; align-items: start; }
 .catalog-panel, .config-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; box-shadow: var(--shadow); }
@@ -698,6 +699,7 @@ select { height: 40px; min-width: 140px; border: 1px solid var(--line-dark); bor
   .mobile-quick-status > span { display: inline-flex; align-items: center; gap: 5px; color: #80939b; font-size: 10px; }
   .mobile-quick-status i { width: 7px; height: 7px; border-radius: 50%; background: #64757d; }
   .mobile-quick-nav[data-status="warn"] .mobile-quick-status i { background: var(--signal); }
+  .mobile-quick-nav[data-status="error"] .mobile-quick-status i { background: var(--danger); }
   .mobile-quick-nav[data-status="ok"] .mobile-quick-status i { background: var(--success); }
   [data-theme="light"] .mobile-quick-nav { color: #304047; background: rgba(249,251,251,.97); border-top-color: #b7c6cb; box-shadow: 0 -8px 22px rgba(38,55,62,.14); }
   [data-theme="light"] .mobile-quick-nav button { color: #72848c; background: transparent; }
@@ -828,6 +830,7 @@ body::before {
 .health-stat .health-light { background: #52646e; }
 .health-stat.is-ok .health-light { background: var(--success); box-shadow: 0 0 7px rgba(111,186,145,.35), 0 0 0 4px rgba(111,186,145,.08); }
 .health-stat.is-warn .health-light { background: var(--signal); box-shadow: 0 0 7px rgba(216,181,101,.35), 0 0 0 4px rgba(216,181,101,.08); }
+.health-stat.is-error .health-light { background: var(--danger); box-shadow: 0 0 7px rgba(183,70,70,.36), 0 0 0 4px rgba(183,70,70,.1); }
 
 .catalog-panel, .config-panel {
   position: relative;
@@ -1053,24 +1056,38 @@ body::before {
 .config-check-chevron { color: var(--cyan); font-size: 17px; line-height: 1; transition: transform 160ms ease; }
 .config-check-panel[data-status="info"] .config-check-state > i, .config-check-panel[data-status="ok"] .config-check-state > i { background: var(--success); box-shadow: 0 0 0 4px rgba(111,186,145,.1); }
 .config-check-panel[data-status="warn"] .config-check-state > i { background: var(--signal); box-shadow: 0 0 0 4px rgba(212,182,109,.1); }
+.config-check-panel[data-status="error"] .config-check-state > i { background: var(--danger); box-shadow: 0 0 0 4px rgba(183,70,70,.14); }
 .config-check-panel.is-expanded .config-check-chevron { transform: rotate(180deg); }
 .config-check-drawer { position: absolute; right: 0; bottom: 100%; left: 0; z-index: 20; padding: 11px 12px 12px; border-top: 1px solid var(--line); background: var(--surface); box-shadow: 0 -16px 34px rgba(0,0,0,.28); opacity: 0; visibility: hidden; transform: translateY(7px); pointer-events: none; transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease; }
 .config-check-panel.is-expanded .config-check-drawer { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
 .config-check-drawer-head { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .config-check-drawer-head strong { font-size: 13px; }
 .config-check-drawer-head span { color: var(--muted); font-size: 9px; }
-.config-panel .config-warning-list { max-height: 230px; padding: 0 3px 0 0; margin: 0; display: grid; align-content: start; gap: 6px; overflow-y: auto; scrollbar-width: thin; }
+.compatibility-stats { margin-bottom: 8px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+.compatibility-stats > div { min-width: 0; min-height: 46px; padding: 7px 8px; display: grid; align-content: center; gap: 3px; border: 1px solid var(--line); border-left: 3px solid #657780; background: var(--surface-2); }
+.compatibility-stats span { overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.compatibility-stats strong { overflow: hidden; color: var(--ink); font: 700 12px/1.15 "Cascadia Mono",Consolas,monospace; text-overflow: ellipsis; white-space: nowrap; }
+.compatibility-stats [data-tone="ok"] { border-left-color: var(--success); }
+.compatibility-stats [data-tone="warn"] { border-left-color: var(--signal); }
+.compatibility-stats [data-tone="error"] { border-left-color: var(--danger); }
+.config-panel .config-warning-list { max-height: 260px; padding: 0 3px 0 0; margin: 0; display: grid; align-content: start; gap: 6px; overflow-y: auto; scrollbar-width: thin; }
 .config-panel .config-warning-list li { min-width: 0; padding: 8px 9px; display: grid; grid-template-columns: 23px minmax(0,1fr); align-items: start; gap: 8px; border: 1px solid rgba(212,182,109,.16); border-left: 3px solid var(--signal); color: #d7c390; background: rgba(212,182,109,.07); font-size: 10px; }
+.config-panel .config-warning-list li.error { color: #efa5a5; border-color: rgba(215,93,93,.25); border-left-color: var(--danger); background: rgba(183,70,70,.1); }
 .config-panel .config-warning-list li.info { color: #b8d4e8; border-color: rgba(120,166,200,.2); border-left-color: var(--blue); background: rgba(120,166,200,.08); }
 .config-panel .config-warning-list li.ok { color: #abd6bd; border-color: rgba(111,186,145,.2); border-left-color: var(--success); background: rgba(111,186,145,.07); }
+.config-panel .config-warning-list li.ready { color: var(--muted); border-color: var(--line); border-left-color: #657780; background: var(--surface-2); }
 .check-message-icon { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 50%; font: 800 11px/1 Consolas,monospace; opacity: .8; }
 .check-message-copy { min-width: 0; display: block; }
-.check-message-copy strong { display: block; color: inherit; font-size: 9px; line-height: 1.2; }
+.check-message-copy small { display: block; margin-bottom: 2px; color: var(--muted); font-size: 8px; font-weight: 700; }
+.check-message-copy strong { display: block; color: inherit; font-size: 10px; line-height: 1.25; }
 .check-message-copy > span { display: block; margin-top: 3px; color: inherit; line-height: 1.45; overflow-wrap: anywhere; white-space: normal; }
+.compatibility-action { min-height: 28px; margin-top: 7px; padding: 4px 8px; border: 1px solid currentColor; border-radius: 3px; color: inherit; background: transparent; font-size: 9px; font-weight: 700; cursor: pointer; }
+.compatibility-action:hover { color: var(--ink); border-color: var(--cyan); background: rgba(98,184,177,.1); }
 
 [data-theme="light"] .config-check-panel { background: #f3f6f7; }
 [data-theme="light"] .config-check-bar:hover { background: #e8f1f1; }
 [data-theme="light"] .config-check-drawer { background: #fff; box-shadow: 0 -14px 30px rgba(43,62,69,.16); }
+[data-theme="light"] .config-panel .config-warning-list li.error { color: #8d3434; border-color: #e1b2ae; border-left-color: var(--danger); background: #faecea; }
 [data-theme="light"] .config-panel .config-warning-list li.info { color: #315f7d; border-color: #bfd0dc; border-left-color: var(--blue); background: #eaf1f5; }
 [data-theme="light"] .config-panel .config-warning-list li.warn { color: #73571d; border-color: #ddcfaf; border-left-color: var(--signal); background: #f6f0e4; }
 [data-theme="light"] .config-panel .config-warning-list li.ok { color: #35664b; border-color: #c4d9cc; border-left-color: var(--success); background: #edf5f0; }
@@ -1152,7 +1169,10 @@ body::before {
   .overview-detail-trigger:disabled { cursor: default; }
   .overview-detail-trigger:disabled::after { display: none; }
   .overview-detail-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .config-panel .config-warning-list { max-height: none; padding-right: 0; overflow: visible; }
+  .compatibility-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .config-check-drawer-head { align-items: flex-start; }
+  .config-check-drawer-head span { max-width: 55%; text-align: right; }
+  .config-panel .config-warning-list { max-height: min(45vh,360px); padding-right: 2px; overflow-y: auto; }
   .share-dialog { width: calc(100vw - 16px); }
   .share-dialog-header, .share-dialog-body, .share-dialog-actions { padding-inline: 14px; }
   .share-link-row { grid-template-columns: 1fr 1fr; }
